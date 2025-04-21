@@ -28,21 +28,31 @@ const AppLayout = ({ children }) => {
 };
 
 const ProtectedRoute = ({ children }) => {
-  const { user } = useAuth();
+  const { session, loading: authLoading } = useAuth();
   const [hasAccess, setHasAccess] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const checkAccess = async () => {
-      if (!user) return setHasAccess(false);
+      if (authLoading) return;
+
+      if (!session?.user) {
+        setHasAccess(false);
+        setLoading(false);
+        return;
+      }
 
       const { data, error } = await supabase
         .from('users_meta')
         .select('trial_start, subscribed')
-        .eq('user_id', user.id)
+        .eq('user_id', session.user.id)
         .single();
 
-      if (error || !data) return setHasAccess(false);
+      if (error || !data) {
+        setHasAccess(false);
+        setLoading(false);
+        return;
+      }
 
       const { trial_start, subscribed } = data;
       setHasAccess(subscribed || isTrialActive(trial_start));
@@ -50,16 +60,19 @@ const ProtectedRoute = ({ children }) => {
     };
 
     checkAccess();
-  }, [user]);
+  }, [session, authLoading]);
 
-  if (loading) return <div>Loading...</div>;
+  if (authLoading || loading) return <div>Loading...</div>;
 
   return hasAccess ? children : <Navigate to="/pricing" replace />;
 };
 
 const AuthRedirect = ({ children }) => {
-  const { user } = useAuth();
-  return user ? <Navigate to="/dashboard" replace /> : children;
+  const { session, loading } = useAuth();
+
+  if (loading) return <div>Loading...</div>;
+
+  return session?.user ? <Navigate to="/dashboard" replace /> : children;
 };
 
 const App = () => {

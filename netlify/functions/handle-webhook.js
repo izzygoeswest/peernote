@@ -7,15 +7,7 @@ const supabase = createClient(
 );
 
 exports.handler = async (event) => {
-  if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      body: 'Method Not Allowed',
-    };
-  }
-
   const sig = event.headers['stripe-signature'];
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
   let stripeEvent;
 
@@ -23,45 +15,39 @@ exports.handler = async (event) => {
     stripeEvent = stripe.webhooks.constructEvent(
       event.body,
       sig,
-      webhookSecret
+      process.env.STRIPE_WEBHOOK_SECRET
     );
   } catch (err) {
-    console.error('⚠️ Webhook signature verification failed:', err.message);
+    console.error('Webhook signature verification failed.', err.message);
     return {
       statusCode: 400,
       body: `Webhook Error: ${err.message}`,
     };
   }
 
-  // 🎯 Only handle when checkout session is complete
   if (stripeEvent.type === 'checkout.session.completed') {
     const session = stripeEvent.data.object;
+    const user_id = session.metadata?.user_id;
 
-    const userId = session.client_reference_id;
-
-    if (!userId) {
-      console.error('❌ Missing client_reference_id (user ID)');
+    if (!user_id) {
       return {
         statusCode: 400,
-        body: 'Missing user ID',
+        body: JSON.stringify({ error: 'Missing user_id from metadata' }),
       };
     }
 
-    // ✅ Mark the user as subscribed in Supabase
     const { error } = await supabase
       .from('users_meta')
       .update({ subscribed: true })
-      .eq('user_id', userId);
+      .eq('user_id', user_id);
 
     if (error) {
-      console.error('❌ Supabase update failed:', error.message);
+      console.error('Failed to update user subscription:', error);
       return {
         statusCode: 500,
-        body: 'Failed to update user subscription status',
+        body: JSON.stringify({ error: error.message }),
       };
     }
-
-    console.log(`✅ User ${userId} marked as subscribed`);
   }
 
   return {

@@ -28,15 +28,13 @@ const AppLayout = ({ children }) => {
 };
 
 const ProtectedRoute = ({ children }) => {
-  const { session, loading: authLoading } = useAuth();
+  const { session } = useAuth();
   const [hasAccess, setHasAccess] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const checkAccess = async () => {
-      if (authLoading) return;
-
-      if (!session?.user) {
+      if (!session?.user?.id) {
         setHasAccess(false);
         setLoading(false);
         return;
@@ -49,6 +47,7 @@ const ProtectedRoute = ({ children }) => {
         .single();
 
       if (error || !data) {
+        console.error('Supabase error:', error);
         setHasAccess(false);
         setLoading(false);
         return;
@@ -60,19 +59,16 @@ const ProtectedRoute = ({ children }) => {
     };
 
     checkAccess();
-  }, [session, authLoading]);
+  }, [session]);
 
-  if (authLoading || loading) return <div>Loading...</div>;
+  if (loading) return <div>Loading...</div>;
 
   return hasAccess ? children : <Navigate to="/pricing" replace />;
 };
 
 const AuthRedirect = ({ children }) => {
-  const { session, loading } = useAuth();
-
-  if (loading) return <div>Loading...</div>;
-
-  return session?.user ? <Navigate to="/dashboard" replace /> : children;
+  const { session } = useAuth();
+  return session ? <Navigate to="/dashboard" replace /> : children;
 };
 
 const App = () => {

@@ -1,7 +1,12 @@
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY); // secret key should already be in Netlify
-const { buffer } = require('micro');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const { createClient } = require('@supabase/supabase-js');
 
-exports.handler = async (event, context) => {
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
+exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') {
     return {
       statusCode: 405,
@@ -21,20 +26,42 @@ exports.handler = async (event, context) => {
       webhookSecret
     );
   } catch (err) {
-    console.error('Webhook error:', err.message);
+    console.error('⚠️ Webhook signature verification failed:', err.message);
     return {
       statusCode: 400,
       body: `Webhook Error: ${err.message}`,
     };
   }
 
-  // 🎯 Listen for subscription success
+  // 🎯 Only handle when checkout session is complete
   if (stripeEvent.type === 'checkout.session.completed') {
     const session = stripeEvent.data.object;
 
-    console.log('✅ Subscription successful for:', session.customer_email);
+    const userId = session.client_reference_id;
 
-    // TODO: Update your database (Supabase) here to mark user as 'paid'
+    if (!userId) {
+      console.error('❌ Missing client_reference_id (user ID)');
+      return {
+        statusCode: 400,
+        body: 'Missing user ID',
+      };
+    }
+
+    // ✅ Mark the user as subscribed in Supabase
+    const { error } = await supabase
+      .from('users_meta')
+      .update({ subscribed: true })
+      .eq('user_id', userId);
+
+    if (error) {
+      console.error('❌ Supabase update failed:', error.message);
+      return {
+        statusCode: 500,
+        body: 'Failed to update user subscription status',
+      };
+    }
+
+    console.log(`✅ User ${userId} marked as subscribed`);
   }
 
   return {

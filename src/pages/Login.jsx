@@ -37,7 +37,7 @@ const Login = () => {
           <div className="bg-purple-200 rounded-full p-3">
             <span className="text-3xl">💼</span>
           </div>
-          <h1 className="text-2xl font-bold mt-2">Relationship Reboot</h1>
+          <h1 className="text-2xl font-bold mt-2">PeerNote</h1>
           <p className="text-sm text-gray-500">Your personal CRM for stronger connections</p>
         </div>
 

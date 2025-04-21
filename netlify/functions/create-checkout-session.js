@@ -1,20 +1,19 @@
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const { createClient } = require('@supabase/supabase-js');
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
 exports.handler = async (event) => {
-  if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      body: 'Method Not Allowed',
-    };
-  }
-
   try {
     const { user_id } = JSON.parse(event.body);
 
     if (!user_id) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: 'Missing user_id in request' }),
+        body: JSON.stringify({ error: 'Missing user_id' }),
       };
     }
 
@@ -23,13 +22,13 @@ exports.handler = async (event) => {
       mode: 'subscription',
       line_items: [
         {
-          price: process.env.STRIPE_PRICE_ID, // Make sure this env variable is set in Netlify
+          price: process.env.STRIPE_PRICE_ID,
           quantity: 1,
         },
       ],
-      success_url: 'https://peernote.netlify.app/dashboard',
-      cancel_url: 'https://peernote.netlify.app/pricing',
-      client_reference_id: user_id, // used to mark the user as paid in webhook
+      success_url: `${process.env.SUCCESS_URL || 'http://localhost:5173/dashboard'}`,
+      cancel_url: `${process.env.CANCEL_URL || 'http://localhost:5173/pricing'}`,
+      metadata: { user_id },
     });
 
     return {
@@ -37,7 +36,7 @@ exports.handler = async (event) => {
       body: JSON.stringify({ url: session.url }),
     };
   } catch (error) {
-    console.error('❌ Stripe session error:', error);
+    console.error('Stripe checkout error:', error);
     return {
       statusCode: 500,
       body: JSON.stringify({ error: error.message }),

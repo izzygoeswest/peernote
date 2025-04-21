@@ -1,41 +1,38 @@
 import React from 'react';
+import { supabase } from '../supabaseClient';
 import { loadStripe } from '@stripe/stripe-js';
-
-// Replace with your real Stripe publishable key
-const stripePromise = loadStripe('pk_test_51RFpbxRXDDeRwNbpfHewihmM5uSVvD2W7rIC83G0U6L98JnpnWRWsPNhvci7GARIG5K86XyIsmo1NKVxNh4LZr0800kzX6rJm9');
 
 const Pricing = () => {
   const handleCheckout = async () => {
-    const stripe = await stripePromise;
+    const { data: user } = await supabase.auth.getUser();
 
-    const response = await fetch('/.netlify/functions/create-checkout-session', {
+    const res = await fetch('/.netlify/functions/create-checkout-session', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ plan: 'peer-pro' }), // optional payload if needed
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ user_id: user?.user?.id }),
     });
 
-    const session = await response.json();
-    const result = await stripe.redirectToCheckout({ sessionId: session.id });
+    const { url } = await res.json();
+    const stripe = await loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
-    if (result.error) {
-      alert(result.error.message);
-    }
+    await stripe.redirectToCheckout({ sessionId: url });
   };
 
   return (
-    <div className="max-w-2xl mx-auto p-6 text-center bg-white shadow rounded mt-10">
-      <h1 className="text-3xl font-bold mb-6">Upgrade to PeerNote Pro</h1>
+    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gray-100 text-center">
+      <h1 className="text-4xl font-bold mb-4">Upgrade to PeerNote Pro</h1>
+      <p className="text-lg mb-8 text-gray-600">Start with a 7-day free trial. Then just $5/month. Cancel anytime.</p>
 
-      <div className="bg-gray-100 p-6 rounded">
-        <h2 className="text-xl font-semibold mb-2">PeerNote Pro</h2>
-        <p className="text-gray-600 mb-4">Unlimited contacts, reminders, and priority support.</p>
-        <p className="text-2xl font-bold mb-4">$5/month</p>
-
+      <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-md">
+        <h2 className="text-2xl font-semibold mb-2">PeerNote Pro</h2>
+        <p className="text-gray-600 mb-4">Includes full access to contacts, reminders, follow-up tracking, and more.</p>
         <button
           onClick={handleCheckout}
-          className="bg-purple-600 text-white px-6 py-2 rounded hover:bg-purple-700"
+          className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition"
         >
-          Subscribe Now
+          Start Free Trial
         </button>
       </div>
     </div>

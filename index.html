@@ -2,26 +2,12 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PeerNote</title>
-
-    <!-- ⚠️ Silent polyfill: prevents .match() crashes without flooding console -->
-    <script>
-      ;(function() {
-        const orig = String.prototype.match;
-        String.prototype.match = function(...args) {
-          // if someone calls .match() on anything but a primitive string, bail out
-          if (typeof this !== 'string') {
-            return null;
-          }
-          return orig.apply(this, args);
-        };
-      })();
-    </script>
   </head>
   <body>
     <div id="root"></div>
+    <!-- Vite will transform this to point at your built JS in dist/ -->
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

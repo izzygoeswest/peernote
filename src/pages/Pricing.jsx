@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { loadStripe } from '@stripe/stripe-js';
 import { useAuth } from '../auth';
@@ -10,12 +11,15 @@ const Pricing = () => {
   const handleCheckout = async () => {
     const stripe = await stripePromise;
 
+    if (!session?.user?.id) {
+      alert("Please log in to upgrade.");
+      return;
+    }
+
     const response = await fetch('/.netlify/functions/create-checkout-session', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ user_id: session?.user?.id }),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: session.user.id }),
     });
 
     const data = await response.json();
@@ -44,12 +48,10 @@ const Pricing = () => {
 
         <button
           onClick={handleCheckout}
-          className="bg-purple-600 text-white px-6 py-3 rounded-lg text-lg hover:bg-purple-700 transition"
+          className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition"
         >
-          Start Free Trial
+          Upgrade Now
         </button>
-
-        <p className="mt-4 text-xs text-gray-400">Cancel anytime. No questions asked.</p>
       </div>
     </div>
   );

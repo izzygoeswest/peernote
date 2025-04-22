@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
@@ -29,7 +30,7 @@ const AppLayout = ({ children }) => {
 
 const ProtectedRoute = ({ children }) => {
   const { session } = useAuth();
-  const [hasAccess, setHasAccess] = useState(null);
+  const [hasAccess, setHasAccess] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -46,15 +47,13 @@ const ProtectedRoute = ({ children }) => {
         .eq('user_id', session.user.id)
         .single();
 
-      if (error || !data) {
-        console.error('Supabase error:', error);
+      if (error) {
+        console.error("Supabase error:", error);
         setHasAccess(false);
-        setLoading(false);
-        return;
+      } else {
+        const { trial_start, subscribed } = data || {};
+        setHasAccess(subscribed || isTrialActive(trial_start));
       }
-
-      const { trial_start, subscribed } = data;
-      setHasAccess(subscribed || isTrialActive(trial_start));
       setLoading(false);
     };
 
@@ -62,7 +61,6 @@ const ProtectedRoute = ({ children }) => {
   }, [session]);
 
   if (loading) return <div>Loading...</div>;
-
   return hasAccess ? children : <Navigate to="/pricing" replace />;
 };
 
@@ -77,14 +75,15 @@ const App = () => {
       <AppLayout>
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/pricing" element={<Pricing />} />
           <Route path="/login" element={<AuthRedirect><Login /></AuthRedirect>} />
           <Route path="/signup" element={<AuthRedirect><Signup /></AuthRedirect>} />
+          <Route path="/pricing" element={<Pricing />} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/contacts" element={<ProtectedRoute><Contacts /></ProtectedRoute>} />
           <Route path="/reminders" element={<ProtectedRoute><Reminders /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+          <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </AppLayout>
     </Router>

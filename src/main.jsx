@@ -4,15 +4,14 @@ import App from './App';
 import './index.css';
 import { AuthProvider } from './auth';
 
-// 🛡️ Safe fallback for bad `.match()` calls from libraries
+// 🛡️ Global fix: prevent `.match()` from crashing when called on undefined/null
 const originalMatch = String.prototype.match;
 String.prototype.match = function (...args) {
-  try {
-    return originalMatch.apply(this, args);
-  } catch (err) {
-    console.warn('Caught unsafe match call:', this, args);
+  if (typeof this !== 'string') {
+    console.warn('Skipping .match() on non-string:', this);
     return null;
   }
+  return originalMatch.apply(this, args);
 };
 
 // 🔐 Global catch for unhandled promise rejections

@@ -4,7 +4,7 @@ import App from './App';
 import './index.css';
 import { AuthProvider } from './auth';
 
-// 🔐 Global catch for any unhandled promise rejections
+// global catch for any unhandled promise rejections
 window.addEventListener('unhandledrejection', (event) => {
   console.error('Unhandled promise rejection:', event.reason);
 });

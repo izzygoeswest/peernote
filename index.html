@@ -2,11 +2,27 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <link rel="icon" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PeerNote</title>
+
+    <!-- ⚠️ Polyfill to prevent 3rd‑party libs from crashing on undefined.match() -->
+    <script>
+      (function () {
+        const orig = String.prototype.match;
+        String.prototype.match = function (...args) {
+          if (typeof this !== 'string') {
+            console.warn('Skipping .match() on non-string:', this);
+            return null;
+          }
+          return orig.apply(this, args);
+        };
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
+    <!-- your Vite entrypoint -->
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

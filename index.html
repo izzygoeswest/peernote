@@ -6,13 +6,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PeerNote</title>
 
-    <!-- ⚠️ Polyfill to prevent 3rd‑party libs from crashing on undefined.match() -->
+    <!-- ⚠️ Silent polyfill: prevents .match() crashes without flooding console -->
     <script>
-      (function () {
+      ;(function() {
         const orig = String.prototype.match;
-        String.prototype.match = function (...args) {
+        String.prototype.match = function(...args) {
+          // if someone calls .match() on anything but a primitive string, bail out
           if (typeof this !== 'string') {
-            console.warn('Skipping .match() on non-string:', this);
             return null;
           }
           return orig.apply(this, args);
@@ -22,7 +22,6 @@
   </head>
   <body>
     <div id="root"></div>
-    <!-- your Vite entrypoint -->
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

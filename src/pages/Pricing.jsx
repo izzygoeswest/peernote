@@ -6,78 +6,73 @@ import { useNavigate } from 'react-router-dom';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
 
-const tiers = [
-  {
-    name: 'Free',
-    price: '$0',
-    features: [
-      'Track up to 10 contacts',
-      'Basic reminders & notes',
-      'Community support',
-    ],
-    cta: 'Sign Up Free',
-    action: (navigate) => () => navigate('/signup'),
-    featured: false,
-  },
-  {
-    name: 'Pro',
-    price: '$9/mo',
-    features: [
-      'Unlimited contacts',
-      'Advanced reminders & tags',
-      'Export to Excel',
-      'Email notifications',
-    ],
-    cta: 'Upgrade to Pro',
-    action: null, // will assign in component
-    featured: true,
-  },
-  {
-    name: 'Enterprise',
-    price: 'Custom',
-    features: [
-      'Dedicated account manager',
-      'Custom integrations',
-      'Priority support',
-    ],
-    cta: 'Contact Sales',
-    action: (navigate) => () => navigate('/contact'),
-    featured: false,
-  },
-];
-
 export default function Pricing() {
   const { session } = useAuth();
   const navigate = useNavigate();
 
-  // Build the Pro-tier action now that we have `session`
-  const proTier = tiers.find((t) => t.name === 'Pro');
-  proTier.action = async () => {
-    // if not logged in, send them to Sign Up (no popup)
-    if (!session?.user?.id) {
-      navigate('/signup');
-      return;
-    }
-
-    try {
-      const stripe = await stripePromise;
-      const resp = await fetch('/.netlify/functions/create-checkout-session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: session.user.id }),
-      });
-      const data = await resp.json();
-      if (data.sessionId) {
-        await stripe.redirectToCheckout({ sessionId: data.sessionId });
-      } else {
-        console.error('Checkout session error:', data);
-        alert('Could not start checkout.');
-      }
-    } catch (err) {
-      console.error('Stripe checkout error:', err);
-      alert('Could not start checkout.');
-    }
-  };
+  const tiers = [
+    {
+      name: 'Free',
+      price: '$0',
+      features: [
+        'Track up to 20 contacts',
+        'Basic reminders & notes',
+        'Community support',
+      ],
+      cta: 'Sign Up Free',
+      action: () => navigate('/signup'),
+      featured: false,
+    },
+    {
+      name: 'Pro',
+      price: '$5/mo',
+      features: [
+        'Unlimited contacts',
+        'Advanced reminders & tags',
+        'Export to Excel',
+        'Email notifications',
+      ],
+      cta: 'Upgrade to Pro',
+      action: async () => {
+        if (!session?.user?.id) {
+          // If not logged in, send to signup
+          navigate('/signup');
+          return;
+        }
+        try {
+          const stripe = await stripePromise;
+          const resp = await fetch('/.netlify/functions/create-checkout-session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: session.user.id }),
+          });
+          const data = await resp.json();
+          if (data.sessionId) {
+            await stripe.redirectToCheckout({ sessionId: data.sessionId });
+          } else {
+            console.error('Checkout session error:', data);
+            alert('Could not start checkout.');
+          }
+        } catch (err) {
+          console.error('Stripe checkout error:', err);
+          alert('Could not start checkout.');
+        }
+      },
+      featured: true,
+    },
+    {
+      name: 'Enterprise',
+      price: 'Custom',
+      features: [
+        'Dedicated account manager',
+        'Custom integrations',
+        'Priority support',
+      ],
+      cta: 'Contact Sales',
+      action: () => navigate('/contact'),
+      featured: false,
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-gray-50 py-16 px-4">
@@ -106,7 +101,7 @@ export default function Pricing() {
               ))}
             </ul>
             <button
-              onClick={tier.action(navigate)}
+              onClick={tier.action}
               className={`mt-auto py-2 rounded text-white font-medium ${
                 tier.featured
                   ? 'bg-blue-600 hover:bg-blue-700'

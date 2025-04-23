@@ -2,6 +2,7 @@
 import React from 'react';
 import { loadStripe } from '@stripe/stripe-js';
 import { useAuth } from '../auth';
+import { useNavigate } from 'react-router-dom';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
 
@@ -9,14 +10,18 @@ const tiers = [
   {
     name: 'Free',
     price: '$0',
-    features: ['Track up to 25 contacts', 'Basic reminders & notes', 'Community support'],
+    features: [
+      'Track up to 10 contacts',
+      'Basic reminders & notes',
+      'Community support',
+    ],
     cta: 'Sign Up Free',
-    action: () => window.location.assign('/signup'),
+    action: (navigate) => () => navigate('/signup'),
     featured: false,
   },
   {
     name: 'Pro',
-    price: '$5/mo',
+    price: '$9/mo',
     features: [
       'Unlimited contacts',
       'Advanced reminders & tags',
@@ -24,39 +29,63 @@ const tiers = [
       'Email notifications',
     ],
     cta: 'Upgrade to Pro',
-    action: async () => {
-      const stripe = await stripePromise;
-      const resp = await fetch('/.netlify/functions/create-checkout-session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: (await import('../auth')).useAuth().session.user.id }),
-      });
-      const data = await resp.json();
-      if (data.sessionId) {
-        stripe.redirectToCheckout({ sessionId: data.sessionId });
-      } else {
-        alert('Could not start checkout.');
-        console.error(data);
-      }
-    },
+    action: null, // we’ll assign below
     featured: true,
   },
   {
     name: 'Enterprise',
     price: 'Custom',
-    features: ['Dedicated account manager','Custom integrations','Priority support'],
+    features: [
+      'Dedicated account manager',
+      'Custom integrations',
+      'Priority support',
+    ],
     cta: 'Contact Sales',
-    action: () => window.location.assign('/contact'),
+    action: (navigate) => () => navigate('/contact'),
     featured: false,
   },
 ];
 
 export default function Pricing() {
+  const { session } = useAuth();
+  const navigate = useNavigate();
+
+  // Build the action for the Pro tier now that we have `session`
+  const proTier = tiers.find((t) => t.name === 'Pro');
+  proTier.action = async () => {
+    if (!session?.user?.id) {
+      alert('Please log in to upgrade.');
+      navigate('/login');
+      return;
+    }
+
+    try {
+      const stripe = await stripePromise;
+      const resp = await fetch('/.netlify/functions/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: session.user.id }),
+      });
+      const data = await resp.json();
+      if (data.sessionId) {
+        await stripe.redirectToCheckout({ sessionId: data.sessionId });
+      } else {
+        console.error('Checkout session error:', data);
+        alert('Could not start checkout.');
+      }
+    } catch (err) {
+      console.error('Stripe checkout error:', err);
+      alert('Could not start checkout.');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 py-16 px-4">
       <div className="max-w-3xl mx-auto text-center mb-12">
         <h1 className="text-4xl font-bold">Choose Your Plan</h1>
-        <p className="mt-4 text-gray-600">Start with a 7-day free trial of Pro. No credit card required.</p>
+        <p className="mt-4 text-gray-600">
+          Start with a 7-day free trial of Pro. No credit card required.
+        </p>
       </div>
       <div className="grid gap-8 lg:grid-cols-3">
         {tiers.map((tier) => (
@@ -77,9 +106,11 @@ export default function Pricing() {
               ))}
             </ul>
             <button
-              onClick={tier.action}
+              onClick={tier.action(navigate)}
               className={`mt-auto py-2 rounded text-white font-medium ${
-                tier.featured ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-600 hover:bg-gray-700'
+                tier.featured
+                  ? 'bg-blue-600 hover:bg-blue-700'
+                  : 'bg-gray-600 hover:bg-gray-700'
               }`}
             >
               {tier.cta}

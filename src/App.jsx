@@ -20,6 +20,21 @@ import { useAuth } from './auth';
 import { supabase } from './supabaseClient';
 import { isTrialActive } from './utils/checkTrialStatus';
 
+// Banner for expired users
+const ExpiredBanner = () => (
+  <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+    <div className="bg-yellow-100 border-l-4 border-yellow-500 p-6 rounded shadow-lg text-center">
+      <p className="text-lg">
+        Your free 7-day trial has expired.{' '}
+        <a href="/pricing" className="underline font-semibold text-blue-600">
+          Upgrade now
+        </a>{' '}
+        to regain access.
+      </p>
+    </div>
+  </div>
+);
+
 const AppLayout = ({ children }) => {
   const location = useLocation();
   const noSidebarRoutes = ['/', '/login', '/signup', '/pricing'];
@@ -53,8 +68,7 @@ const ProtectedRoute = ({ children }) => {
       .then(({ data, error }) => {
         if (error) {
           console.error('Supabase error fetching meta:', error);
-          // On RLS or any fetch error, grant access for trial logic
-          setHasAccess(true);
+          setHasAccess(false);
         } else {
           const { trial_start, subscribed } = data || {};
           setHasAccess(subscribed || isTrialActive(trial_start));
@@ -62,7 +76,7 @@ const ProtectedRoute = ({ children }) => {
       })
       .catch((err) => {
         console.error('Unexpected error fetching meta:', err);
-        setHasAccess(true);
+        setHasAccess(false);
       })
       .finally(() => {
         setLoading(false);
@@ -70,7 +84,8 @@ const ProtectedRoute = ({ children }) => {
   }, [session]);
 
   if (loading) return <div>Loading...</div>;
-  return hasAccess ? children : <Navigate to="/pricing" replace />;
+  if (!hasAccess) return <ExpiredBanner />;
+  return children;
 };
 
 const AuthRedirect = ({ children }) => {
@@ -78,74 +93,72 @@ const AuthRedirect = ({ children }) => {
   return session ? <Navigate to="/dashboard" replace /> : children;
 };
 
-const App = () => {
-  return (
-    <Router>
-      <AppLayout>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route
-            path="/login"
-            element={
-              <AuthRedirect>
-                <Login />
-              </AuthRedirect>
-            }
-          />
-          <Route
-            path="/signup"
-            element={
-              <AuthRedirect>
-                <Signup />
-              </AuthRedirect>
-            }
-          />
-          <Route path="/pricing" element={<Pricing />} />
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/contacts"
-            element={
-              <ProtectedRoute>
-                <Contacts />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/reminders"
-            element={
-              <ProtectedRoute>
-                <Reminders />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/profile"
-            element={
-              <ProtectedRoute>
-                <Profile />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/settings"
-            element={
-              <ProtectedRoute>
-                <Settings />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="*" element={<Navigate to="/" />} />
-        </Routes>
-      </AppLayout>
-    </Router>
-  );
-};
+const App = () => (
+  <Router>
+    <AppLayout>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route
+          path="/login"
+          element={
+            <AuthRedirect>
+              <Login />
+            </AuthRedirect>
+          }
+        />
+        <Route
+          path="/signup"
+          element={
+            <AuthRedirect>
+              <Signup />
+            </AuthRedirect>
+          }
+        />
+        <Route path="/pricing" element={<Pricing />} />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/contacts"
+          element={
+            <ProtectedRoute>
+              <Contacts />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/reminders"
+          element={
+            <ProtectedRoute>
+              <Reminders />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <Settings />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="*" element={<Navigate to="/" />} />
+      </Routes>
+    </AppLayout>
+  </Router>
+);
 
 export default App;

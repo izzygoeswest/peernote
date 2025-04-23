@@ -29,7 +29,7 @@ const tiers = [
       'Email notifications',
     ],
     cta: 'Upgrade to Pro',
-    action: null, // we’ll assign below
+    action: null, // will assign in component
     featured: true,
   },
   {
@@ -50,12 +50,12 @@ export default function Pricing() {
   const { session } = useAuth();
   const navigate = useNavigate();
 
-  // Build the action for the Pro tier now that we have `session`
+  // Build the Pro-tier action now that we have `session`
   const proTier = tiers.find((t) => t.name === 'Pro');
   proTier.action = async () => {
+    // if not logged in, send them to Sign Up (no popup)
     if (!session?.user?.id) {
-      alert('Please log in to upgrade.');
-      navigate('/login');
+      navigate('/signup');
       return;
     }
 

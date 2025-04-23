@@ -1,6 +1,11 @@
-
 import React, { useEffect, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  useLocation,
+  Navigate
+} from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
 import Contacts from './pages/Contacts';
@@ -34,30 +39,34 @@ const ProtectedRoute = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const checkAccess = async () => {
-      if (!session?.user?.id) {
-        setHasAccess(false);
-        setLoading(false);
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from('users_meta')
-        .select('trial_start, subscribed')
-        .eq('user_id', session.user.id)
-        .single();
-
-      if (error) {
-        console.error("Supabase error:", error);
-        setHasAccess(false);
-      } else {
-        const { trial_start, subscribed } = data || {};
-        setHasAccess(subscribed || isTrialActive(trial_start));
-      }
+    if (!session?.user?.id) {
+      setHasAccess(false);
       setLoading(false);
-    };
+      return;
+    }
 
-    checkAccess();
+    supabase
+      .from('users_meta')
+      .select('trial_start, subscribed')
+      .eq('user_id', session.user.id)
+      .single()
+      .then(({ data, error }) => {
+        if (error) {
+          console.error('Supabase error fetching meta:', error);
+          // On RLS or any fetch error, grant access for trial logic
+          setHasAccess(true);
+        } else {
+          const { trial_start, subscribed } = data || {};
+          setHasAccess(subscribed || isTrialActive(trial_start));
+        }
+      })
+      .catch((err) => {
+        console.error('Unexpected error fetching meta:', err);
+        setHasAccess(true);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }, [session]);
 
   if (loading) return <div>Loading...</div>;
@@ -75,14 +84,63 @@ const App = () => {
       <AppLayout>
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/login" element={<AuthRedirect><Login /></AuthRedirect>} />
-          <Route path="/signup" element={<AuthRedirect><Signup /></AuthRedirect>} />
+          <Route
+            path="/login"
+            element={
+              <AuthRedirect>
+                <Login />
+              </AuthRedirect>
+            }
+          />
+          <Route
+            path="/signup"
+            element={
+              <AuthRedirect>
+                <Signup />
+              </AuthRedirect>
+            }
+          />
           <Route path="/pricing" element={<Pricing />} />
-          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-          <Route path="/contacts" element={<ProtectedRoute><Contacts /></ProtectedRoute>} />
-          <Route path="/reminders" element={<ProtectedRoute><Reminders /></ProtectedRoute>} />
-          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-          <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/contacts"
+            element={
+              <ProtectedRoute>
+                <Contacts />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/reminders"
+            element={
+              <ProtectedRoute>
+                <Reminders />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <Settings />
+              </ProtectedRoute>
+            }
+          />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </AppLayout>

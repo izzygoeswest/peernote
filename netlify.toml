@@ -1,8 +1,7 @@
 [build]
-  functions = "netlify/functions"
+  command = "npm run build"
   publish = "dist"
+  functions = "netlify/functions"
 
-[dev]
-  command = "npm run dev"
-  port = 5173
-  targetPort = 5173
+[build.environment]
+  SECRETS_SCAN_OMIT_KEYS = "VITE_SUPABASE_URL,VITE_SUPABASE_ANON_KEY,VITE_STRIPE_PUBLIC_KEY"

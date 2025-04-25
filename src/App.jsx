@@ -68,9 +68,19 @@ const ProtectedRoute = ({ children }) => {
       .then(({ data, error }) => {
         if (error) {
           console.error('Supabase error fetching meta:', error);
+          if (error.code === 'PGRST116') {
+            // No row exists yet: create it and allow trial
+            supabase
+              .from('users_meta')
+              .insert({ user_id: session.user.id })
+              .then(() => setHasAccess(true))
+              .finally(() => setLoading(false));
+            return;
+          }
+          // Any other error → treat as expired
           setHasAccess(false);
         } else {
-          const { trial_start, subscribed } = data || {};
+          const { trial_start, subscribed } = data;
           setHasAccess(subscribed || isTrialActive(trial_start));
         }
       })

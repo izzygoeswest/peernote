@@ -27,25 +27,32 @@ export default function Signup() {
       );
 
       if (signupError) {
-        setError(signupError.message);
+        const msg = signupError.message.toLowerCase();
+        if (signupError.status === 429 || msg.includes('rate')) {
+          setError('Too many sign-up attempts — please wait a few minutes and try again.');
+        } else {
+          setError(signupError.message);
+        }
         return;
       }
 
-      // If confirmation required (no session returned)
+      // Confirmation required: no session returned
       if (!data.session && data.user) {
         await supabase.from('users_meta').upsert({ user_id: data.user.id });
-        setMessage(
-          '🎉 Signup successful! Check your inbox for the confirmation link.'
-        );
+        setMessage('🎉 Signup successful! Check your inbox for a confirmation link.');
         return;
       }
 
-      // Otherwise, session exists → user confirmed
+      // Otherwise, user is confirmed and session exists
       await supabase.from('users_meta').upsert({ user_id: data.user.id });
       navigate('/dashboard');
     } catch (err) {
       console.error('Unexpected signup error:', err);
-      setError(err.message || 'Something went wrong — please try again.');
+      if (err.status === 429) {
+        setError('Too many sign-up attempts — please wait a few minutes and try again.');
+      } else {
+        setError(err.message || 'Something went wrong — please try again.');
+      }
     }
   };
 
@@ -89,11 +96,8 @@ export default function Signup() {
           />
         </div>
 
-        {error && (
-          <p className="text-red-600 text-sm text-center">{error}</p>
-        )}
-        {message && (
-          <p className="text-green-600 text-sm text-center">{message}</p>
+        {(error || message) && (
+          <p className={`text-sm text-center ${error ? 'text-red-600' : 'text-green-600'}`}>{error || message}</p>
         )}
 
         <button

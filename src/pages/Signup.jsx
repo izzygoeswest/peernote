@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { supabase } from '../supabaseClient';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '../supabaseClient';
 
 export default function Signup() {
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -18,29 +18,30 @@ export default function Signup() {
     setError('');
     setMessage('');
 
+    const redirectUrl = `${window.location.origin}/login`;
+
     try {
-      const { data, error: signupError } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-      });
+      const { data, error: signupError } = await supabase.auth.signUp(
+        { email: formData.email, password: formData.password },
+        { redirectTo: redirectUrl }
+      );
 
       if (signupError) {
         setError(signupError.message);
         return;
       }
 
-      // If email confirmations are enabled, no session yet
+      // If confirmation required (no session returned)
       if (!data.session && data.user) {
-        // Create metadata row so trial_start is recorded
-        await supabase.from('users_meta').insert([{ user_id: data.user.id }]);
+        await supabase.from('users_meta').upsert({ user_id: data.user.id });
         setMessage(
-          '🎉 Signup successful! Please check your inbox to confirm your email before logging in.'
+          '🎉 Signup successful! Check your inbox for the confirmation link.'
         );
         return;
       }
 
       // Otherwise, session exists → user confirmed
-      await supabase.from('users_meta').insert([{ user_id: data.user.id }]);
+      await supabase.from('users_meta').upsert({ user_id: data.user.id });
       navigate('/dashboard');
     } catch (err) {
       console.error('Unexpected signup error:', err);
@@ -57,46 +58,42 @@ export default function Signup() {
         <h2 className="text-3xl font-extrabold text-center">Create Your Account</h2>
 
         <div>
-          <label className="block text-sm font-medium mb-1" htmlFor="email">
+          <label htmlFor="email" className="block text-sm font-medium mb-1">
             Email
           </label>
           <input
             id="email"
-            type="email"
             name="email"
+            type="email"
             value={formData.email}
             onChange={handleChange}
             required
-            className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
             placeholder="you@example.com"
+            className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1" htmlFor="password">
+          <label htmlFor="password" className="block text-sm font-medium mb-1">
             Password
           </label>
           <input
             id="password"
-            type="password"
             name="password"
+            type="password"
             value={formData.password}
             onChange={handleChange}
             required
-            className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
             placeholder="••••••••"
+            className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
           />
         </div>
 
         {error && (
-          <p className="text-red-600 text-sm text-center">
-            {error}
-          </p>
+          <p className="text-red-600 text-sm text-center">{error}</p>
         )}
         {message && (
-          <p className="text-green-600 text-sm text-center">
-            {message}
-          </p>
+          <p className="text-green-600 text-sm text-center">{message}</p>
         )}
 
         <button

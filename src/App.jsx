@@ -39,7 +39,6 @@ const AppLayout = ({ children }) => {
   const location = useLocation();
   const noSidebarRoutes = ['/', '/login', '/signup', '/pricing'];
   const hideSidebar = noSidebarRoutes.includes(location.pathname);
-
   return (
     <div className="min-h-screen flex">
       {!hideSidebar && <Sidebar />}
@@ -65,20 +64,21 @@ const ProtectedRoute = ({ children }) => {
       .select('trial_start, subscribed')
       .eq('user_id', session.user.id)
       .single()
-      .then(({ data, error }) => {
+      .then(async ({ data, error }) => {
         if (error) {
           console.error('Supabase error fetching meta:', error);
+
           if (error.code === 'PGRST116') {
-            // No row exists yet: create it and allow trial
-            supabase
+            // No row exists → create it via upsert and allow trial
+            await supabase
               .from('users_meta')
-              .insert({ user_id: session.user.id })
-              .then(() => setHasAccess(true))
-              .finally(() => setLoading(false));
-            return;
+              .upsert({ user_id: session.user.id }, { onConflict: 'user_id' });
+            setHasAccess(true);
+          } else {
+            // Other errors → expire
+            setHasAccess(false);
           }
-          // Any other error → treat as expired
-          setHasAccess(false);
+
         } else {
           const { trial_start, subscribed } = data;
           setHasAccess(subscribed || isTrialActive(trial_start));

@@ -8,6 +8,5 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
-  },
-  // ← do NOT include a `global` property here at all
+  }
 });

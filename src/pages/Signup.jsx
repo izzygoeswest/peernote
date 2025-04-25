@@ -1,9 +1,8 @@
-
 import React, { useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { useNavigate } from 'react-router-dom';
 
-const Signup = () => {
+export default function Signup() {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
@@ -30,50 +29,84 @@ const Signup = () => {
         return;
       }
 
-      if (data && data.user) {
+      // If email confirmations are enabled, no session yet
+      if (!data.session && data.user) {
+        // Create metadata row so trial_start is recorded
         await supabase.from('users_meta').insert([{ user_id: data.user.id }]);
-        navigate('/dashboard');
-      } else {
-        setMessage("Signup successful! Please check your email to confirm your account.");
+        setMessage(
+          '🎉 Signup successful! Please check your inbox to confirm your email before logging in.'
+        );
+        return;
       }
+
+      // Otherwise, session exists → user confirmed
+      await supabase.from('users_meta').insert([{ user_id: data.user.id }]);
+      navigate('/dashboard');
     } catch (err) {
-      console.error("Unexpected signup error:", err);
-      setError("Something went wrong. Please try again.");
+      console.error('Unexpected signup error:', err);
+      setError(err.message || 'Something went wrong — please try again.');
     }
   };
 
   return (
-    <div className="flex items-center justify-center h-screen bg-gray-100 px-4">
-      <form onSubmit={handleSignup} className="bg-white p-8 rounded shadow-md w-full max-w-md">
-        <h2 className="text-2xl font-bold mb-4">Create Account</h2>
+    <div className="flex items-center justify-center h-screen bg-gray-100 p-4">
+      <form
+        onSubmit={handleSignup}
+        className="w-full max-w-md bg-white rounded-lg shadow-lg p-6 space-y-4"
+      >
+        <h2 className="text-3xl font-extrabold text-center">Create Your Account</h2>
 
-        <input
-          type="email"
-          name="email"
-          placeholder="Email"
-          value={formData.email}
-          onChange={handleChange}
-          className="w-full px-3 py-2 mb-4 border rounded"
-          required
-        />
-        <input
-          type="password"
-          name="password"
-          placeholder="Password"
-          value={formData.password}
-          onChange={handleChange}
-          className="w-full px-3 py-2 mb-4 border rounded"
-          required
-        />
+        <div>
+          <label className="block text-sm font-medium mb-1" htmlFor="email">
+            Email
+          </label>
+          <input
+            id="email"
+            type="email"
+            name="email"
+            value={formData.email}
+            onChange={handleChange}
+            required
+            className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
+            placeholder="you@example.com"
+          />
+        </div>
 
-        {error && <p className="text-red-600 text-sm mb-2">{error}</p>}
-        {message && <p className="text-green-600 text-sm mb-2">{message}</p>}
+        <div>
+          <label className="block text-sm font-medium mb-1" htmlFor="password">
+            Password
+          </label>
+          <input
+            id="password"
+            type="password"
+            name="password"
+            value={formData.password}
+            onChange={handleChange}
+            required
+            className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
+            placeholder="••••••••"
+          />
+        </div>
 
-        <button type="submit" className="bg-purple-600 text-white w-full py-2 rounded hover:bg-purple-700">
+        {error && (
+          <p className="text-red-600 text-sm text-center">
+            {error}
+          </p>
+        )}
+        {message && (
+          <p className="text-green-600 text-sm text-center">
+            {message}
+          </p>
+        )}
+
+        <button
+          type="submit"
+          className="w-full bg-purple-600 text-white py-2 rounded-lg font-medium hover:bg-purple-700 transition"
+        >
           Sign Up
         </button>
 
-        <p className="text-sm text-center mt-4">
+        <p className="text-center text-sm text-gray-500">
           Already have an account?{' '}
           <a href="/login" className="text-purple-600 hover:underline">
             Log in
@@ -82,6 +115,4 @@ const Signup = () => {
       </form>
     </div>
   );
-};
-
-export default Signup;
+}

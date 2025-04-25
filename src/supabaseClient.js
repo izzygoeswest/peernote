@@ -9,5 +9,5 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     autoRefreshToken: true,
   },
-  // ← make sure there is NO `global` or `headers` property here
+  // ← do NOT include a `global` property here at all
 });

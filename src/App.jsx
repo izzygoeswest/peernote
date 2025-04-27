@@ -45,10 +45,10 @@ const AppLayout = ({ children }) => {
     <div className="min-h-screen flex">
       {!hideSidebar && <Sidebar />}
       <div className="flex-1 flex flex-col min-h-screen">
-        {/* Header with improved padding */}
-        <header className="flex items-center justify-end bg-white shadow-sm px-6 md:px-12 py-4">
+        {/* Header with enhanced padding */}
+        <header className="flex items-center justify-end bg-white shadow-sm px-8 md:px-16 py-4">
           {session?.user?.email && (
-            <div className="flex items-center space-x-3 pr-8">
+            <div className="flex items-center space-x-3 pr-12">
               <div className="w-8 h-8 rounded-full bg-purple-600 text-white flex items-center justify-center">
                 {session.user.email.charAt(0).toUpperCase()}
               </div>
@@ -123,14 +123,35 @@ const App = () => (
     <AppLayout>
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/login" element={<AuthRedirect><Login /></AuthRedirect>} />
-        <Route path="/signup" element={<AuthRedirect><Signup /></AuthRedirect>} />
+        <Route
+          path="/login"
+          element={<AuthRedirect><Login /></AuthRedirect>}
+        />
+        <Route
+          path="/signup"
+          element={<AuthRedirect><Signup /></AuthRedirect>}
+        />
         <Route path="/pricing" element={<Pricing />} />
-        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-        <Route path="/contacts" element={<ProtectedRoute><Contacts /></ProtectedRoute>} />
-        <Route path="/reminders" element={<ProtectedRoute><Reminders /></ProtectedRoute>} />
-        <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-        <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+        <Route
+          path="/dashboard"
+          element={<ProtectedRoute><Dashboard /></ProtectedRoute>}
+        />
+        <Route
+          path="/contacts"
+          element={<ProtectedRoute><Contacts /></ProtectedRoute>}
+        />
+        <Route
+          path="/reminders"
+          element={<ProtectedRoute><Reminders /></ProtectedRoute>}
+        />
+        <Route
+          path="/profile"
+          element={<ProtectedRoute><Profile /></ProtectedRoute>}
+        />
+        <Route
+          path="/settings"
+          element={<ProtectedRoute><Settings /></ProtectedRoute>}
+        />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </AppLayout>

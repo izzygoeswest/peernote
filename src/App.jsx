@@ -37,12 +37,32 @@ const ExpiredBanner = () => (
 
 const AppLayout = ({ children }) => {
   const location = useLocation();
+  const { session } = useAuth();
   const noSidebarRoutes = ['/', '/login', '/signup', '/pricing'];
   const hideSidebar = noSidebarRoutes.includes(location.pathname);
+
   return (
     <div className="min-h-screen flex">
       {!hideSidebar && <Sidebar />}
-      <div className="flex-1 overflow-x-hidden">{children}</div>
+      <div className="flex-1 flex flex-col min-h-screen">
+        {/* Header with improved padding */}
+        <header className="flex items-center justify-end bg-white shadow-sm px-6 md:px-12 py-4">
+          {session?.user?.email && (
+            <div className="flex items-center space-x-3 pr-8">
+              <div className="w-8 h-8 rounded-full bg-purple-600 text-white flex items-center justify-center">
+                {session.user.email.charAt(0).toUpperCase()}
+              </div>
+              <span className="text-gray-700 break-words">
+                {session.user.email}
+              </span>
+            </div>
+          )}
+        </header>
+        {/* Main content area with padding */}
+        <main className="flex-1 overflow-y-auto p-6">
+          {children}
+        </main>
+      </div>
     </div>
   );
 };
@@ -67,18 +87,15 @@ const ProtectedRoute = ({ children }) => {
       .then(async ({ data, error }) => {
         if (error) {
           console.error('Supabase error fetching meta:', error);
-
           if (error.code === 'PGRST116') {
-            // No row exists → create it via upsert and allow trial
-            await supabase
-              .from('users_meta')
-              .upsert({ user_id: session.user.id }, { onConflict: 'user_id' });
+            // No row exists → create it and allow trial
+            await supabase.from('users_meta').upsert(
+              { user_id: session.user.id }, { onConflict: 'user_id' }
+            );
             setHasAccess(true);
           } else {
-            // Other errors → expire
             setHasAccess(false);
           }
-
         } else {
           const { trial_start, subscribed } = data;
           setHasAccess(subscribed || isTrialActive(trial_start));
@@ -88,9 +105,7 @@ const ProtectedRoute = ({ children }) => {
         console.error('Unexpected error fetching meta:', err);
         setHasAccess(false);
       })
-      .finally(() => {
-        setLoading(false);
-      });
+      .finally(() => setLoading(false));
   }, [session]);
 
   if (loading) return <div>Loading...</div>;
@@ -108,63 +123,14 @@ const App = () => (
     <AppLayout>
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route
-          path="/login"
-          element={
-            <AuthRedirect>
-              <Login />
-            </AuthRedirect>
-          }
-        />
-        <Route
-          path="/signup"
-          element={
-            <AuthRedirect>
-              <Signup />
-            </AuthRedirect>
-          }
-        />
+        <Route path="/login" element={<AuthRedirect><Login /></AuthRedirect>} />
+        <Route path="/signup" element={<AuthRedirect><Signup /></AuthRedirect>} />
         <Route path="/pricing" element={<Pricing />} />
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/contacts"
-          element={
-            <ProtectedRoute>
-              <Contacts />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/reminders"
-          element={
-            <ProtectedRoute>
-              <Reminders />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/profile"
-          element={
-            <ProtectedRoute>
-              <Profile />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/settings"
-          element={
-            <ProtectedRoute>
-              <Settings />
-            </ProtectedRoute>
-          }
-        />
+        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/contacts" element={<ProtectedRoute><Contacts /></ProtectedRoute>} />
+        <Route path="/reminders" element={<ProtectedRoute><Reminders /></ProtectedRoute>} />
+        <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </AppLayout>

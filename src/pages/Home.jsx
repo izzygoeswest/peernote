@@ -5,6 +5,13 @@ import { motion } from 'framer-motion';
 const Home = () => {
   return (
     <div className="bg-white text-gray-900">
+      {/* Top Login Link */}
+      <div className="w-full max-w-6xl mx-auto flex justify-end p-4">
+        <Link to="/login" className="text-purple-600 font-medium hover:underline">
+          Login
+        </Link>
+      </div>
+
       {/* Hero Section */}
       <section className="text-center py-28 px-4 bg-white relative overflow-hidden">
         <motion.div

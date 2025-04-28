@@ -1,7 +1,19 @@
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+import Stripe from 'stripe';
 
-exports.handler = async (event) => {
-  const { user_id } = JSON.parse(event.body || '{}');
+// Initialize Stripe with your secret key
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: '2022-11-15',
+});
+
+export async function handler(event) {
+  // Parse body safely
+  let body;
+  try {
+    body = JSON.parse(event.body || '{}');
+  } catch (e) {
+    body = {};
+  }
+  const { user_id } = body;
 
   if (!user_id) {
     return {
@@ -20,11 +32,9 @@ exports.handler = async (event) => {
           quantity: 1,
         },
       ],
-      metadata: {
-        user_id,
-      },
-      success_url: `${process.env.URL}/dashboard`,
-      cancel_url: `${process.env.URL}/pricing`,
+      metadata: { user_id },
+      success_url: `${process.env.SITE_URL}/dashboard`,
+      cancel_url: `${process.env.SITE_URL}/pricing`,
     });
 
     return {
@@ -38,4 +48,4 @@ exports.handler = async (event) => {
       body: JSON.stringify({ error: error.message }),
     };
   }
-};
+}

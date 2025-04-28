@@ -1,42 +1,17 @@
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-const { createClient } = require('@supabase/supabase-js');
+import Stripe from 'stripe';
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: '2022-11-15',
+});
 
-exports.handler = async (event) => {
-  const sig = event.headers['stripe-signature'];
-  let stripeEvent;
-
+export async function handler(event) {
   try {
-    stripeEvent = stripe.webhooks.constructEvent(
-      event.body,
-      sig,
-      process.env.STRIPE_WEBHOOK_SECRET
-    );
+    const payload = JSON.parse(event.body);
+    // TODO: process other webhook events here
+    console.log('stripe-webhook event:', payload);
+    return { statusCode: 200, body: 'OK' };
   } catch (err) {
-    return {
-      statusCode: 400,
-      body: `Webhook Error: ${err.message}`,
-    };
+    console.error('stripe-webhook error:', err);
+    return { statusCode: 500, body: err.message };
   }
-
-  if (stripeEvent.type === 'checkout.session.completed') {
-    const session = stripeEvent.data.object;
-    const userId = session.client_reference_id;
-
-    if (userId) {
-      await supabase
-        .from('users_meta')
-        .update({ subscribed: true })
-        .eq('user_id', userId);
-    }
-  }
-
-  return {
-    statusCode: 200,
-    body: JSON.stringify({ received: true }),
-  };
-};
+}

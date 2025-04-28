@@ -1,3 +1,5 @@
+# netlify.toml
+
 [build]
   command = "npm run build"
   publish = "dist"
@@ -5,4 +7,11 @@
 
 [build.environment]
   SECRETS_SCAN_OMIT_KEYS = "VITE_SUPABASE_URL,VITE_SUPABASE_ANON_KEY,VITE_STRIPE_PUBLIC_KEY"
-  
+
+# Enable ESBuild for bundling your Functions (optional, but recommended)
+[functions]
+  node_bundler = "esbuild"
+
+# Schedule your send-reminders function to run every hour
+[functions.cron]
+  send-reminders = "@hourly"

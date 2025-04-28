@@ -6,6 +6,7 @@ import {
   useLocation,
   Navigate
 } from 'react-router-dom';
+import { FiMenu } from 'react-icons/fi';
 import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
 import Contacts from './pages/Contacts';
@@ -38,17 +39,24 @@ const ExpiredBanner = () => (
 const AppLayout = ({ children }) => {
   const location = useLocation();
   const { session } = useAuth();
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const noSidebarRoutes = ['/', '/login', '/signup', '/pricing'];
   const hideSidebar = noSidebarRoutes.includes(location.pathname);
+  const showSidebar = sidebarOpen && !hideSidebar;
 
   return (
     <div className="min-h-screen flex">
-      {!hideSidebar && <Sidebar />}
+      {showSidebar && <Sidebar onToggle={() => setSidebarOpen(false)} />}
       <div className="flex-1 flex flex-col min-h-screen">
         {/* Header with enhanced padding */}
-        <header className="flex items-center justify-end bg-white shadow-sm px-8 md:px-16 py-4">
+        <header className="flex items-center justify-between bg-white shadow-sm px-8 md:px-16 py-4">
+          {!hideSidebar && (
+            <button onClick={() => setSidebarOpen(true)} className="text-gray-500 hover:text-black">
+              <FiMenu size={24} />
+            </button>
+          )}
           {session?.user && (
-            <div className="flex items-center space-x-3 pr-12">
+            <div className="flex items-center space-x-3">
               <div className="w-8 h-8 rounded-full bg-purple-600 text-white flex items-center justify-center">
                 {(
                   session.user.user_metadata?.name

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { FiMenu } from 'react-icons/fi';
 import {
   BrowserRouter as Router,
   Routes,
@@ -6,7 +7,6 @@ import {
   useLocation,
   Navigate
 } from 'react-router-dom';
-import { FiMenu } from 'react-icons/fi';
 import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
 import Contacts from './pages/Contacts';
@@ -50,7 +50,7 @@ const AppLayout = ({ children }) => {
       <div className="flex-1 flex flex-col min-h-screen">
         {/* Header with enhanced padding */}
         <header className="flex items-center justify-between bg-white shadow-sm px-8 md:px-16 py-4">
-          {!hideSidebar && (
+          {!hideSidebar && !sidebarOpen && (
             <button onClick={() => setSidebarOpen(true)} className="text-gray-500 hover:text-black">
               <FiMenu size={24} />
             </button>

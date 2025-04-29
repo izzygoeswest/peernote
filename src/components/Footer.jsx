@@ -1,22 +1,23 @@
+// src/components/Footer.jsx
 import React from 'react';
 import { Link } from 'react-router-dom';
 
 export default function Footer() {
   return (
-    <footer className="bg-gray-800 text-gray-200 py-6 px-4">
+    <footer className="bg-white text-gray-600 py-6 px-4 border-t border-gray-200">
       <div className="max-w-7xl mx-auto flex flex-col items-center">
         {/* Navigation Links */}
         <nav className="flex space-x-6 mb-4">
-          <Link to="/" className="text-sm hover:text-white">
+          <Link to="/" className="text-sm hover:text-gray-800">
             Home
           </Link>
-          <Link to="/pricing" className="text-sm hover:text-white">
+          <Link to="/pricing" className="text-sm hover:text-gray-800">
             Pricing
           </Link>
-          <Link to="/login" className="text-sm hover:text-white">
+          <Link to="/login" className="text-sm hover:text-gray-800">
             Login
           </Link>
-          <Link to="/signup" className="text-sm hover:text-white">
+          <Link to="/signup" className="text-sm hover:text-gray-800">
             Signup
           </Link>
         </nav>
@@ -28,22 +29,22 @@ export default function Footer() {
 
         {/* Privacy & Terms */}
         <div className="flex space-x-4 mb-4">
-          <Link to="/privacy" className="text-sm hover:text-white">
+          <Link to="/privacy" className="text-sm hover:text-gray-800">
             Privacy Policy
           </Link>
-          <Link to="/terms" className="text-sm hover:text-white">
+          <Link to="/terms" className="text-sm hover:text-gray-800">
             Terms of Service
           </Link>
         </div>
 
         {/* Powered By */}
-        <div className="text-xs text-gray-400">
+        <div className="text-xs text-gray-500">
           Powered by{' '}
           <a
-            href="https://gentle.ai"
+            href="https://gentleai.tech"
             target="_blank"
             rel="noopener noreferrer"
-            className="hover:text-gray-200"
+            className="hover:text-gray-700"
           >
             Gentle AI
           </a>

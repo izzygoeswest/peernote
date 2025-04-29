@@ -182,17 +182,6 @@ const Home = () => {
           </Link>
         </motion.div>
       </section>
-
-      {/* Footer */}
-      <footer className="text-center py-8 text-sm text-gray-500 bg-white border-t">
-        <div className="space-x-6">
-          <Link to="/">Home</Link>
-          <Link to="/pricing">Pricing</Link>
-          <Link to="/login">Login</Link>
-          <Link to="/signup">Signup</Link>
-        </div>
-        <p className="mt-4">&copy; {new Date().getFullYear()} PeerNote</p>
-      </footer>
     </div>
   );
 };

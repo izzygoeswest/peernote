@@ -1,5 +1,5 @@
+// src/App.jsx
 import React, { useEffect, useState } from 'react';
-import { FiMenu } from 'react-icons/fi';
 import {
   BrowserRouter as Router,
   Routes,
@@ -17,6 +17,7 @@ import Pricing from './pages/Pricing';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
 import Home from './pages/Home';
+import Footer from './components/Footer';
 import { useAuth } from './auth';
 import { supabase } from './supabaseClient';
 import { isTrialActive } from './utils/checkTrialStatus';
@@ -39,42 +40,35 @@ const ExpiredBanner = () => (
 const AppLayout = ({ children }) => {
   const location = useLocation();
   const { session } = useAuth();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
   const noSidebarRoutes = ['/', '/login', '/signup', '/pricing'];
   const hideSidebar = noSidebarRoutes.includes(location.pathname);
-  const showSidebar = sidebarOpen && !hideSidebar;
 
   return (
-    <div className="min-h-screen flex">
-      {showSidebar && <Sidebar onToggle={() => setSidebarOpen(false)} />}
-      <div className="flex-1 flex flex-col min-h-screen">
-        {/* Header with enhanced padding */}
-        <header className="flex items-center justify-between bg-white shadow-sm px-8 md:px-16 py-4">
-          {!hideSidebar && !sidebarOpen && (
-            <button onClick={() => setSidebarOpen(true)} className="text-gray-500 hover:text-black">
-              <FiMenu size={24} />
-            </button>
-          )}
-          {session?.user && (
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 rounded-full bg-purple-600 text-white flex items-center justify-center">
-                {(
-                  session.user.user_metadata?.name
-                    ? session.user.user_metadata.name.charAt(0).toUpperCase()
-                    : session.user.email.charAt(0).toUpperCase()
-                )}
+    <div className="min-h-screen flex flex-col">
+      <div className="flex flex-1">
+        {!hideSidebar && <Sidebar />}
+        <div className="flex-1 flex flex-col">
+          {/* Header */}
+          <header className="flex items-center justify-end bg-white shadow-sm px-8 md:px-16 py-4">
+            {session?.user?.email && (
+              <div className="flex items-center space-x-3 pr-12">
+                <div className="w-8 h-8 rounded-full bg-purple-600 text-white flex items-center justify-center">
+                  {session.user.email.charAt(0).toUpperCase()}
+                </div>
+                <span className="text-gray-700 break-words">
+                  {session.user.email}
+                </span>
               </div>
-              <span className="text-gray-700 break-words">
-                {session.user.user_metadata?.name || session.user.email}
-              </span>
-            </div>
-          )}
-        </header>
-        {/* Main content area with padding */}
-        <main className="flex-1 overflow-y-auto p-6">
-          {children}
-        </main>
+            )}
+          </header>
+
+          {/* Main content */}
+          <main className="flex-1 overflow-y-auto p-6">{children}</main>
+        </div>
       </div>
+
+      {/* Site-wide footer */}
+      <Footer />
     </div>
   );
 };
@@ -98,12 +92,10 @@ const ProtectedRoute = ({ children }) => {
       .single()
       .then(async ({ data, error }) => {
         if (error) {
-          console.error('Supabase error fetching meta:', error);
           if (error.code === 'PGRST116') {
-            // No row exists → create it and allow trial
-            await supabase.from('users_meta').upsert(
-              { user_id: session.user.id }, { onConflict: 'user_id' }
-            );
+            await supabase
+              .from('users_meta')
+              .upsert({ user_id: session.user.id }, { onConflict: 'user_id' });
             setHasAccess(true);
           } else {
             setHasAccess(false);
@@ -113,10 +105,7 @@ const ProtectedRoute = ({ children }) => {
           setHasAccess(subscribed || isTrialActive(trial_start));
         }
       })
-      .catch((err) => {
-        console.error('Unexpected error fetching meta:', err);
-        setHasAccess(false);
-      })
+      .catch(() => setHasAccess(false))
       .finally(() => setLoading(false));
   }, [session]);
 
@@ -135,14 +124,63 @@ const App = () => (
     <AppLayout>
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/login" element={<AuthRedirect><Login /></AuthRedirect>} />
-        <Route path="/signup" element={<AuthRedirect><Signup /></AuthRedirect>} />
+        <Route
+          path="/login"
+          element={
+            <AuthRedirect>
+              <Login />
+            </AuthRedirect>
+          }
+        />
+        <Route
+          path="/signup"
+          element={
+            <AuthRedirect>
+              <Signup />
+            </AuthRedirect>
+          }
+        />
         <Route path="/pricing" element={<Pricing />} />
-        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-        <Route path="/contacts" element={<ProtectedRoute><Contacts /></ProtectedRoute>} />
-        <Route path="/reminders" element={<ProtectedRoute><Reminders /></ProtectedRoute>} />
-        <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-        <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/contacts"
+          element={
+            <ProtectedRoute>
+              <Contacts />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/reminders"
+          element={
+            <ProtectedRoute>
+              <Reminders />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <Settings />
+            }
+          />
+        />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </AppLayout>

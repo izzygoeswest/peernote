@@ -1,33 +1,53 @@
-// src/components/Footer.jsx
-
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 export default function Footer() {
   return (
     <footer className="bg-gray-800 text-gray-200 py-6 px-4">
-      <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center">
-        <p className="text-sm">
+      <div className="max-w-7xl mx-auto flex flex-col items-center">
+        {/* Navigation Links */}
+        <nav className="flex space-x-6 mb-4">
+          <Link to="/" className="text-sm hover:text-white">
+            Home
+          </Link>
+          <Link to="/pricing" className="text-sm hover:text-white">
+            Pricing
+          </Link>
+          <Link to="/login" className="text-sm hover:text-white">
+            Login
+          </Link>
+          <Link to="/signup" className="text-sm hover:text-white">
+            Signup
+          </Link>
+        </nav>
+
+        {/* Copyright */}
+        <p className="text-sm mb-2">
           &copy; {new Date().getFullYear()} PeerNote. All rights reserved.
         </p>
-        <div className="flex space-x-4 mt-2 md:mt-0">
-          <a href="/privacy" className="text-sm hover:text-white">
+
+        {/* Privacy & Terms */}
+        <div className="flex space-x-4 mb-4">
+          <Link to="/privacy" className="text-sm hover:text-white">
             Privacy Policy
-          </a>
-          <a href="/terms" className="text-sm hover:text-white">
+          </Link>
+          <Link to="/terms" className="text-sm hover:text-white">
             Terms of Service
+          </Link>
+        </div>
+
+        {/* Powered By */}
+        <div className="text-xs text-gray-400">
+          Powered by{' '}
+          <a
+            href="https://gentle.ai"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-gray-200"
+          >
+            Gentle AI
           </a>
         </div>
-      </div>
-      <div className="max-w-7xl mx-auto px-4 mt-4 border-t border-gray-700 pt-4 text-center text-xs text-gray-400">
-        Powered by{' '}
-        <a
-          href="https://gentleai.tech"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="hover:text-gray-200"
-        >
-          Gentle AI
-        </a>
       </div>
     </footer>
   );

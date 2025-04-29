@@ -1,6 +1,7 @@
+// src/components/Footer.jsx
+
 import React from 'react';
 
-// Footer.jsx: Site-wide footer with privacy, terms, and attribution
 export default function Footer() {
   return (
     <footer className="bg-gray-800 text-gray-200 py-6 px-4">
@@ -17,13 +18,13 @@ export default function Footer() {
           </a>
         </div>
       </div>
-      <div className="mt-4 pt-4 border-t border-gray-700 text-center text-xs text-gray-400">
+      <div className="max-w-7xl mx-auto px-4 mt-4 border-t border-gray-700 pt-4 text-center text-xs text-gray-400">
         Powered by{' '}
         <a
-          href="https://gentle.ai"
+          href="https://gentleai.tech"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-gray-300 hover:text-gray-100"
+          className="hover:text-gray-200"
         >
           Gentle AI
         </a>

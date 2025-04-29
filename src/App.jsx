@@ -1,3 +1,5 @@
+// src/App.jsx
+
 import React, { useEffect, useState } from 'react';
 import {
   BrowserRouter as Router,
@@ -9,15 +11,17 @@ import {
 import Sidebar from './components/Sidebar';
 import Footer from './components/Footer';
 import { FiMenu } from 'react-icons/fi';
-import Dashboard from './pages/Dashboard';
-import Contacts from './pages/Contacts';
-import Reminders from './pages/Reminders';
+
+import Home from './pages/Home';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Pricing from './pages/Pricing';
+import Dashboard from './pages/Dashboard';
+import Contacts from './pages/Contacts';
+import Reminders from './pages/Reminders';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
-import Home from './pages/Home';
+
 import { useAuth } from './auth';
 import { supabase } from './supabaseClient';
 import { isTrialActive } from './utils/checkTrialStatus';
@@ -37,29 +41,36 @@ const ExpiredBanner = () => (
   </div>
 );
 
-const AppLayout = ({ children }) => {
+function AppLayout({ children }) {
   const location = useLocation();
   const { session } = useAuth();
   const [isSidebarOpen, setSidebarOpen] = useState(false);
 
-  // Routes where sidebar should be hidden entirely
+  // Hide sidebar on these routes
   const noSidebarRoutes = ['/', '/login', '/signup', '/pricing'];
   const hideSidebar = noSidebarRoutes.includes(location.pathname);
 
-  useEffect(() => {
-    // Close sidebar on route change
-    setSidebarOpen(false);
-  }, [location.pathname]);
+  // Close mobile sidebar on route change
+  useEffect(() => setSidebarOpen(false), [location.pathname]);
+
+  // Determine display name (profile name or fallback to email)
+  const displayName =
+    session?.user?.user_metadata?.name || session?.user?.email;
+  const displayInitial = displayName?.charAt(0).toUpperCase();
 
   return (
     <div className="min-h-screen flex flex-col">
       <div className="flex flex-1">
-        {/* Off-canvas sidebar on mobile, static on desktop */}
+        {/* Sidebar: off-canvas on mobile, static on desktop */}
         {!hideSidebar && (
           <div
-            className={`fixed inset-y-0 left-0 bg-white shadow-md z-50 transform
-              ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-              md:translate-x-0 md:static md:inset-auto transition-transform duration-200`}
+            className={
+              'fixed inset-y-0 left-0 bg-white shadow-md z-50 transform ' +
+              (isSidebarOpen
+                ? 'translate-x-0'
+                : '-translate-x-full') +
+              ' md:translate-x-0 md:static md:inset-auto transition-transform duration-200'
+            }
           >
             <Sidebar onToggle={() => setSidebarOpen(false)} />
           </div>
@@ -67,7 +78,6 @@ const AppLayout = ({ children }) => {
 
         {/* Main content area */}
         <div className="flex-1 flex flex-col">
-          {/* Header with hamburger on mobile */}
           <header className="flex items-center justify-between bg-white shadow-sm px-8 md:px-16 py-4">
             {!hideSidebar && (
               <button
@@ -77,32 +87,31 @@ const AppLayout = ({ children }) => {
                 <FiMenu size={24} />
               </button>
             )}
+
             <div className="flex-1 flex justify-end">
-              {session?.user?.email && (
+              {displayName && (
                 <div className="flex items-center space-x-3 pr-12">
                   <div className="w-8 h-8 rounded-full bg-purple-600 text-white flex items-center justify-center">
-                    {session.user.email.charAt(0).toUpperCase()}
+                    {displayInitial}
                   </div>
                   <span className="text-gray-700 break-words">
-                    {session.user.email}
+                    {displayName}
                   </span>
                 </div>
               )}
             </div>
           </header>
 
-          {/* Page content */}
           <main className="flex-1 overflow-y-auto p-6">{children}</main>
         </div>
       </div>
 
-      {/* Footer */}
       <Footer />
     </div>
   );
-};
+}
 
-const ProtectedRoute = ({ children }) => {
+function ProtectedRoute({ children }) {
   const { session } = useAuth();
   const [hasAccess, setHasAccess] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -113,25 +122,23 @@ const ProtectedRoute = ({ children }) => {
       setLoading(false);
       return;
     }
-
     supabase
       .from('users_meta')
       .select('trial_start, subscribed')
       .eq('user_id', session.user.id)
       .single()
       .then(async ({ data, error }) => {
-        if (error) {
-          if (error.code === 'PGRST116') {
-            await supabase
-              .from('users_meta')
-              .upsert({ user_id: session.user.id }, { onConflict: 'user_id' });
-            setHasAccess(true);
-          } else {
-            setHasAccess(false);
-          }
+        if (error && error.code === 'PGRST116') {
+          await supabase
+            .from('users_meta')
+            .upsert({ user_id: session.user.id }, { onConflict: 'user_id' });
+          setHasAccess(true);
+        } else if (data) {
+          setHasAccess(
+            data.subscribed || isTrialActive(data.trial_start)
+          );
         } else {
-          const { trial_start, subscribed } = data;
-          setHasAccess(subscribed || isTrialActive(trial_start));
+          setHasAccess(false);
         }
       })
       .catch(() => setHasAccess(false))
@@ -141,12 +148,12 @@ const ProtectedRoute = ({ children }) => {
   if (loading) return <div>Loading...</div>;
   if (!hasAccess) return <ExpiredBanner />;
   return children;
-};
+}
 
-const AuthRedirect = ({ children }) => {
+function AuthRedirect({ children }) {
   const { session } = useAuth();
   return session ? <Navigate to="/dashboard" replace /> : children;
-};
+}
 
 export default function App() {
   return (
@@ -179,10 +186,38 @@ export default function App() {
               </ProtectedRoute>
             }
           />
-          <Route path="/contacts" element={<ProtectedRoute><Contacts /></ProtectedRoute>} />
-          <Route path="/reminders" element={<ProtectedRoute><Reminders /></ProtectedRoute>} />
-          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-          <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+          <Route
+            path="/contacts"
+            element={
+              <ProtectedRoute>
+                <Contacts />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/reminders"
+            element={
+              <ProtectedRoute>
+                <Reminders />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <Settings />
+              </ProtectedRoute>
+            }
+          />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </AppLayout>

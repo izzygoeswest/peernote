@@ -38,7 +38,11 @@ const Sidebar = ({ onToggle }) => {
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b">
         <h1 className="text-lg font-bold">Navigation</h1>
-        <button onClick={onToggle} className="text-gray-500 hover:text-black">
+        <button
+        onClick={onToggle}
+        aria-label="Close sidebar"
+        className="text-gray-500 hover:text-black md:hidden"
+      >
           <FiX />
         </button>
       </div>

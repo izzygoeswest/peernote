@@ -1,4 +1,5 @@
 // netlify/functions/send-reminders.js
+
 import mailgun from 'mailgun-js'
 import { createClient } from '@supabase/supabase-js'
 
@@ -15,8 +16,6 @@ const supabase = createClient(
 export const handler = async () => {
   console.log('🔔 send-reminders invoked at', new Date().toISOString())
 
-  // 1) fetch all not-yet-completed reminders whose date ≤ now,
-  //    and grab the contact's email via the FK to contacts.id
   const now = new Date().toISOString()
   const { data: reminders, error: fetchError } = await supabase
     .from('reminders')
@@ -33,7 +32,6 @@ export const handler = async () => {
     }
   }
 
-  // 2) for each reminder, send an email
   const results = await Promise.all(
     reminders.map(async (r) => {
       const to = r.contacts?.email
@@ -42,19 +40,17 @@ export const handler = async () => {
         return { id: r.id, sent: false, reason: 'no-email' }
       }
 
-      const msg = {
-        from: `PeerNote <no-reply@${process.env.MG_DOMAIN}>`,
-        to,
-        subject: '⏰ PeerNote Reminder',
-        text: `Don’t forget: ${r.note} (due ${r.date})`,
-      }
-
       try {
-        await mg.messages().send(msg)
+        await mg.messages().send({
+          from: `PeerNote <no-reply@${process.env.MG_DOMAIN}>`,
+          to,
+          subject: '⏰ PeerNote Reminder',
+          text: `Don’t forget: ${r.note} (due ${r.date})`,
+        })
         console.log(`✉️  Sent reminder ${r.id} to ${to}`)
         return { id: r.id, sent: true }
       } catch (mailErr) {
-        console.error(`❌  Mailgun error sending ${r.id} to ${to}:`, mailErr)
+        console.error(`❌  Mailgun error for ${r.id}:`, mailErr)
         return { id: r.id, sent: false, reason: mailErr.message }
       }
     })

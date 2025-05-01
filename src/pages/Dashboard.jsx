@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { useAuth } from '../auth';
 import dayjs from 'dayjs';
+import { FiUsers, FiBell, FiAlertTriangle } from 'react-icons/fi';
 
 export default function Dashboard() {
   const { session } = useAuth();
@@ -12,7 +13,6 @@ export default function Dashboard() {
   const [upcomingReminders, setUpcomingReminders] = useState(0);
   const [neglectedContacts, setNeglectedContacts] = useState(0);
 
-  // Fetch counts functions
   const fetchContacts = async () => {
     const { count } = await supabase
       .from('contacts')
@@ -48,19 +48,15 @@ export default function Dashboard() {
     fetchReminders();
     fetchNeglected();
 
-    // Realtime channel for reminders
     const remindersChannel = supabase
       .channel(`reminders_user_${userId}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'reminders', filter: `user_id=eq.${userId}` },
-        () => {
-          fetchReminders();
-        }
+        fetchReminders
       )
       .subscribe();
 
-    // Realtime channel for contacts
     const contactsChannel = supabase
       .channel(`contacts_user_${userId}`)
       .on(
@@ -83,15 +79,20 @@ export default function Dashboard() {
     <div>
       <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
       <div className="grid sm:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded shadow text-center">
+        <div className="bg-white p-6 rounded shadow text-center space-y-2">
+          <FiUsers className="mx-auto w-8 h-8 text-purple-600" />
           <p className="text-lg font-medium">Total Contacts</p>
           <p className="text-3xl">{totalContacts}</p>
         </div>
-        <div className="bg-white p-6 rounded shadow text-center">
+
+        <div className="bg-white p-6 rounded shadow text-center space-y-2">
+          <FiBell className="mx-auto w-8 h-8 text-purple-600" />
           <p className="text-lg font-medium">Upcoming Reminders</p>
           <p className="text-3xl">{upcomingReminders}</p>
         </div>
-        <div className="bg-white p-6 rounded shadow text-center">
+
+        <div className="bg-white p-6 rounded shadow text-center space-y-2">
+          <FiAlertTriangle className="mx-auto w-8 h-8 text-purple-600" />
           <p className="text-lg font-medium">Neglected Contacts</p>
           <p className="text-3xl">{neglectedContacts}</p>
         </div>

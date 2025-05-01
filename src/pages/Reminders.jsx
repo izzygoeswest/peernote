@@ -1,130 +1,99 @@
+// src/pages/Reminders.jsx
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../supabaseClient';
+import { useAuth } from '../auth';
 import dayjs from 'dayjs';
-import ReminderForm from '../components/ReminderForm';
 
-const Reminders = () => {
+export default function Reminders() {
+  const { session } = useAuth();
+  const userId = session?.user?.id;
   const [reminders, setReminders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [editingReminder, setEditingReminder] = useState(null);
 
+  // fetch all reminders for this user
   const fetchReminders = async () => {
     setLoading(true);
-    const { data: sessionData } = await supabase.auth.getSession();
-    const user = sessionData.session?.user;
-    if (!user) return;
-
     const { data, error } = await supabase
       .from('reminders')
-      .select('id, date, note, completed, contact_id, contacts(name)')
-      .eq('user_id', user.id)
-      .order('date', { ascending: true });
+      .select(`
+        id,
+        note,
+        date,
+        completed,
+        contacts (
+          id,
+          name
+        )
+      `)
+      .eq('user_id', userId)
+      .order('date', { ascending: false });
 
-    if (!error) {
+    if (error) {
+      console.error('Error fetching reminders:', error);
+    } else {
       setReminders(data);
     }
-
     setLoading(false);
   };
 
+  // on mount & whenever userId changes
   useEffect(() => {
-    fetchReminders();
-  }, []);
+    if (userId) fetchReminders();
+  }, [userId]);
 
-  const markCompleted = async (id) => {
-    await supabase.from('reminders').update({ completed: true }).eq('id', id);
-    fetchReminders();
+  // toggle a reminder's completed flag
+  const toggleCompleted = async (id, currentlyCompleted) => {
+    const { error } = await supabase
+      .from('reminders')
+      .update({ completed: !currentlyCompleted })
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error updating reminder:', error);
+    } else {
+      // reload the list (and Dashboard count will update)
+      fetchReminders();
+    }
   };
 
-  const handleDelete = async (id) => {
-    const confirm = window.confirm('Delete this reminder?');
-    if (!confirm) return;
-
-    await supabase.from('reminders').delete().eq('id', id);
-    fetchReminders();
-  };
-
-  const handleEdit = (reminder) => {
-    setEditingReminder(reminder);
-    setShowForm(true);
-  };
+  if (loading) {
+    return <p className="text-gray-600">Loading reminders…</p>;
+  }
 
   return (
-    <div className="relative">
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Reminders</h1>
-        <button
-          className="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600"
-          onClick={() => {
-            setEditingReminder(null);
-            setShowForm(true);
-          }}
-        >
-          + Add Reminder
-        </button>
-      </div>
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold">Reminders</h1>
 
-      {loading ? (
-        <p className="text-gray-500">Loading...</p>
-      ) : reminders.length === 0 ? (
-        <p className="text-gray-400">No reminders found.</p>
-      ) : (
-        <div className="space-y-4">
-          {reminders.map((reminder) => (
-            <div
-              key={reminder.id}
-              className={`bg-white p-4 rounded shadow flex justify-between items-start ${
-                reminder.completed ? 'opacity-60' : ''
+      <ul className="space-y-4">
+        {reminders.map((r) => (
+          <li
+            key={r.id}
+            className={`flex items-center justify-between p-4 border rounded ${
+              r.completed ? 'opacity-50' : ''
+            }`}
+          >
+            <div>
+              <p className="text-sm text-gray-500">
+                {dayjs(r.date).format('YYYY-MM-DD')}
+              </p>
+              <p className="font-medium">{r.note}</p>
+              <p className="text-sm text-gray-600">
+                Contact: {r.contacts?.name || '—'}
+              </p>
+            </div>
+            <button
+              onClick={() => toggleCompleted(r.id, r.completed)}
+              className={`px-3 py-1 rounded text-sm ${
+                r.completed
+                  ? 'bg-yellow-500 text-white hover:bg-yellow-600'
+                  : 'bg-green-600 text-white hover:bg-green-700'
               }`}
             >
-              <div>
-                <h2 className="font-semibold">
-                  {reminder.contacts?.name || 'Unknown Contact'}
-                </h2>
-                <p className="text-sm text-gray-500">
-                  {dayjs(reminder.date).format('MMMM D, YYYY')}
-                </p>
-                {reminder.note && (
-                  <p className="mt-1 text-gray-700 text-sm">{reminder.note}</p>
-                )}
-              </div>
-              <div className="text-right space-y-1">
-                {!reminder.completed && (
-                  <button
-                    onClick={() => markCompleted(reminder.id)}
-                    className="block text-sm bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600"
-                  >
-                    Mark Complete
-                  </button>
-                )}
-                <button
-                  onClick={() => handleEdit(reminder)}
-                  className="block text-blue-500 text-sm hover:underline"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => handleDelete(reminder.id)}
-                  className="block text-red-500 text-sm hover:underline"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {showForm && (
-        <ReminderForm
-          existingReminder={editingReminder}
-          onClose={() => setShowForm(false)}
-          onReminderAdded={fetchReminders}
-        />
-      )}
+              {r.completed ? 'Mark Active' : 'Mark Complete'}
+            </button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
-};
-
-export default Reminders;
+}

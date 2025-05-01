@@ -12,7 +12,7 @@ export default function Dashboard() {
   const [upcomingReminders, setUpcomingReminders] = useState(0);
   const [neglectedContacts, setNeglectedContacts] = useState(0);
 
-  // Fetch counts
+  // Fetch counts functions
   const fetchContacts = async () => {
     const { count } = await supabase
       .from('contacts')
@@ -48,23 +48,34 @@ export default function Dashboard() {
     fetchReminders();
     fetchNeglected();
 
-    // Realtime subscriptions
-    const remindersSub = supabase
-      .from(`reminders:user_id=eq.${userId}`)
-      .on('*', fetchReminders)
+    // Realtime channel for reminders
+    const remindersChannel = supabase
+      .channel(`reminders_user_${userId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'reminders', filter: `user_id=eq.${userId}` },
+        () => {
+          fetchReminders();
+        }
+      )
       .subscribe();
 
-    const contactsSub = supabase
-      .from(`contacts:user_id=eq.${userId}`)
-      .on('*', () => {
-        fetchContacts();
-        fetchNeglected();
-      })
+    // Realtime channel for contacts
+    const contactsChannel = supabase
+      .channel(`contacts_user_${userId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'contacts', filter: `user_id=eq.${userId}` },
+        () => {
+          fetchContacts();
+          fetchNeglected();
+        }
+      )
       .subscribe();
 
     return () => {
-      supabase.removeSubscription(remindersSub);
-      supabase.removeSubscription(contactsSub);
+      supabase.removeChannel(remindersChannel);
+      supabase.removeChannel(contactsChannel);
     };
   }, [userId]);
 
@@ -72,19 +83,14 @@ export default function Dashboard() {
     <div>
       <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
       <div className="grid sm:grid-cols-3 gap-6">
-        {/* Total Contacts */}
         <div className="bg-white p-6 rounded shadow text-center">
           <p className="text-lg font-medium">Total Contacts</p>
           <p className="text-3xl">{totalContacts}</p>
         </div>
-
-        {/* Upcoming Reminders */}
         <div className="bg-white p-6 rounded shadow text-center">
           <p className="text-lg font-medium">Upcoming Reminders</p>
           <p className="text-3xl">{upcomingReminders}</p>
         </div>
-
-        {/* Neglected Contacts */}
         <div className="bg-white p-6 rounded shadow text-center">
           <p className="text-lg font-medium">Neglected Contacts</p>
           <p className="text-3xl">{neglectedContacts}</p>

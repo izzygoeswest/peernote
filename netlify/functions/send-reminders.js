@@ -1,79 +1,77 @@
 // netlify/functions/send-reminders.js
-
 import mailgun from 'mailgun-js';
 import { createClient } from '@supabase/supabase-js';
-import dayjs from 'dayjs';
 
-// Initialize Mailgun
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
 const mg = mailgun({
   apiKey: process.env.MG_API_KEY,
   domain: process.env.MG_DOMAIN,
 });
 
-// Service-role Supabase client
-const supabase = createClient(
-  process.env.VITE_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
-
-export const handler = async () => {
+exports.handler = async function(event, context) {
   console.log('🔔 send-reminders invoked at', new Date().toISOString());
 
-  // Use date-only filter (YYYY-MM-DD)
-  const cutoffDate = dayjs().format('YYYY-MM-DD');
-  console.log('⏳ cutoffDate =', cutoffDate);
+  // Determine today's date in YYYY-MM-DD
+  const today = new Date().toISOString().split('T')[0];
+  console.log('⏳ cutoffDate =', today);
 
-  // Grab all incomplete reminders due today or earlier
+  // Fetch all incomplete reminders due today
   const { data: reminders, error: fetchError } = await supabase
     .from('reminders')
-    .select('id, note, date, contacts(email)')
-    .eq('completed', false)
-    .lte('date', cutoffDate);
+    .select('id, note, date, user_id')
+    .eq('date', today)
+    .eq('completed', false);
 
-  console.log('Fetched reminders:', reminders, ' error:', fetchError);
   if (fetchError) {
+    console.error('❌ Error fetching reminders:', fetchError);
     return {
       statusCode: 500,
       body: JSON.stringify({ error: fetchError.message }),
     };
   }
 
-  if (!reminders.length) {
-    console.log('No reminders to send.');
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ success: true, count: 0 }),
+  console.log(`📋 Found ${reminders.length} pending reminders`);
+
+  const results = [];
+
+  for (const r of reminders) {
+    // Lookup the user who set this reminder
+    const { data: userData, error: userError } = await supabase
+      .from('auth.users')
+      .select('email')
+      .eq('id', r.user_id)
+      .single();
+
+    if (userError || !userData?.email) {
+      console.error(`❌ Could not fetch user email for ID ${r.user_id}:`, userError);
+      results.push({ id: r.id, sent: false });
+      continue;
+    }
+
+    const toAddress = userData.email;
+    const emailData = {
+      from: `PeerNote <no-reply@${process.env.MG_DOMAIN}>`,
+      to: toAddress,
+      subject: '⏰ PeerNote Reminder',
+      text: `Don't forget: ${r.note} (due ${r.date})`,
     };
+
+    try {
+      await mg.messages().send(emailData);
+      console.log(`✉️ Sent reminder ${r.id} to ${toAddress}`);
+      results.push({ id: r.id, sent: true });
+    } catch (sendError) {
+      console.error(`❌ Mailgun send error for reminder ${r.id}:`, sendError);
+      results.push({ id: r.id, sent: false });
+    }
   }
-
-  // Send one email per reminder
-  const sendResults = await Promise.all(
-    reminders.map(async (r) => {
-      const to = r.contacts?.email;
-      console.log(`→ preparing to mail reminder ${r.id} to ${to}`);
-      if (!to) {
-        console.warn(`Reminder ${r.id} has no contact.email, skipping`);
-        return { id: r.id, sent: false, reason: 'no-contact-email' };
-      }
-
-      try {
-        await mg.messages().send({
-          from: `PeerNote <no-reply@${process.env.MG_DOMAIN}>`,
-          to,
-          subject: '⏰ PeerNote Reminder',
-          text: `Don’t forget: ${r.note} (due ${r.date})`,
-        });
-        console.log(`✉️ Sent reminder ${r.id}`);
-        return { id: r.id, sent: true };
-      } catch (mailErr) {
-        console.error(`❌ Mailgun error for ${r.id}:`, mailErr);
-        return { id: r.id, sent: false, reason: mailErr.message };
-      }
-    })
-  );
 
   return {
     statusCode: 200,
-    body: JSON.stringify({ success: true, results: sendResults }),
+    body: JSON.stringify({ success: true, results }),
   };
 };

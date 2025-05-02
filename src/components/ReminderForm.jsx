@@ -1,3 +1,4 @@
+// src/components/ReminderForm.jsx
 import React, { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { FiX } from 'react-icons/fi'
@@ -45,7 +46,10 @@ export default function ReminderForm({ existingReminder, onClose, onReminderAdde
 
   return (
     <div className="fixed inset-0 z-50 flex">
-      {/* Drawer Panel */}
+      {/* Click-outside overlay first so drawer slides in from right */}
+      <div className="flex-1" onClick={onClose} />
+
+      {/* Drawer Panel on right */}
       <div className="w-full max-w-md bg-white h-full shadow-lg p-6 overflow-auto relative">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
@@ -59,7 +63,6 @@ export default function ReminderForm({ existingReminder, onClose, onReminderAdde
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Contact */}
           <div>
             <label className="block text-sm font-medium">Contact</label>
             <select
@@ -77,7 +80,6 @@ export default function ReminderForm({ existingReminder, onClose, onReminderAdde
             </select>
           </div>
 
-          {/* Date */}
           <div>
             <label className="block text-sm font-medium">Date</label>
             <input
@@ -89,7 +91,6 @@ export default function ReminderForm({ existingReminder, onClose, onReminderAdde
             />
           </div>
 
-          {/* Note */}
           <div>
             <label className="block text-sm font-medium">Note</label>
             <input
@@ -101,7 +102,6 @@ export default function ReminderForm({ existingReminder, onClose, onReminderAdde
             />
           </div>
 
-          {/* Submit */}
           <button
             type="submit"
             disabled={saving}
@@ -115,9 +115,6 @@ export default function ReminderForm({ existingReminder, onClose, onReminderAdde
           </button>
         </form>
       </div>
-
-      {/* Click-outside overlay to close */}
-      <div className="flex-1" onClick={onClose} />
     </div>
   )
 }

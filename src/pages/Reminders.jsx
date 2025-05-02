@@ -15,22 +15,15 @@ export default function Reminders() {
   const [newContact, setNewContact] = useState('');
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
+  const [showForm, setShowForm] = useState(false);
 
-  // fetch all reminders for this user
   const fetchReminders = async () => {
     setLoading(true);
     const { data, error } = await supabase
       .from('reminders')
-      .select(`
-        id,
-        note,
-        date,
-        completed,
-        contacts (
-          id,
-          name
-        )
-      `)
+      .select(
+        `id, note, date, completed, contacts(id, name)`
+      )
       .eq('user_id', userId)
       .order('date', { ascending: false });
     if (error) console.error('Error fetching reminders:', error);
@@ -38,7 +31,6 @@ export default function Reminders() {
     setLoading(false);
   };
 
-  // fetch contacts list for dropdown
   const fetchContacts = async () => {
     const { data, error } = await supabase
       .from('contacts')
@@ -49,7 +41,15 @@ export default function Reminders() {
     else setContacts(data);
   };
 
-  // add a new reminder
+  const toggleCompleted = async (id, currentlyCompleted) => {
+    const { error } = await supabase
+      .from('reminders')
+      .update({ completed: !currentlyCompleted })
+      .eq('id', id);
+    if (error) console.error('Error updating reminder:', error);
+    else fetchReminders();
+  };
+
   const handleAddReminder = async (e) => {
     e.preventDefault();
     if (!newNote || !newDate || !newContact) return;
@@ -62,6 +62,7 @@ export default function Reminders() {
       setNewNote('');
       setNewDate('');
       setNewContact('');
+      setShowForm(false);
       fetchReminders();
     }
     setAdding(false);
@@ -74,64 +75,74 @@ export default function Reminders() {
     }
   }, [userId]);
 
-  if (loading) {
-    return <p className="text-gray-600">Loading reminders…</p>;
-  }
+  if (loading) return <p className="text-gray-600">Loading reminders…</p>;
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Reminders</h1>
+      {/* Header with toggle button */}
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Reminders</h1>
+        <button
+          onClick={() => setShowForm((s) => !s)}
+          className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700"
+        >
+          {showForm ? 'Cancel' : '+ Add Reminder'}
+        </button>
+      </div>
 
       {/* Add Reminder Form */}
-      <form
-        onSubmit={handleAddReminder}
-        className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end"
-      >
-        <div>
-          <label className="block text-sm font-medium">Note</label>
-          <input
-            type="text"
-            value={newNote}
-            onChange={(e) => setNewNote(e.target.value)}
-            required
-            className="w-full px-3 py-2 border rounded"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium">Date</label>
-          <input
-            type="date"
-            value={newDate}
-            onChange={(e) => setNewDate(e.target.value)}
-            required
-            className="w-full px-3 py-2 border rounded"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium">Contact</label>
-          <select
-            value={newContact}
-            onChange={(e) => setNewContact(e.target.value)}
-            required
-            className="w-full px-3 py-2 border rounded"
-          >
-            <option value="">Select</option>
-            {contacts.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <button
-          type="submit"
-          disabled={adding}
-          className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+      {showForm && (
+        <form
+          onSubmit={handleAddReminder}
+          className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end"
         >
-          {adding ? 'Adding…' : 'Add Reminder'}
-        </button>
-      </form>
+          <div>
+            <label className="block text-sm font-medium">Note</label>
+            <input
+              type="text"
+              value={newNote}
+              onChange={(e) => setNewNote(e.target.value)}
+              required
+              className="w-full px-3 py-2 border rounded"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium">Date</label>
+            <input
+              type="date"
+              value={newDate}
+              onChange={(e) => setNewDate(e.target.value)}
+              required
+              className="w-full px-3 py-2 border rounded"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium">Contact</label>
+            <select
+              value={newContact}
+              onChange={(e) => setNewContact(e.target.value)}
+              required
+              className="w-full px-3 py-2 border rounded"
+            >
+              <option value="">Select</option>
+              {contacts.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button
+            type="submit"
+            disabled={adding}
+            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+          >
+            {adding ? 'Adding…' : 'Add'}
+          </button>
+        </form>
+      )}
 
+      {/* Reminder List */}
       <ul className="space-y-4">
         {reminders.map((r) => (
           <li
@@ -150,9 +161,7 @@ export default function Reminders() {
               </p>
             </div>
             <button
-              onClick={() =>
-                toggleCompleted(r.id, r.completed)
-              }
+              onClick={() => toggleCompleted(r.id, r.completed)}
               className={`px-3 py-1 rounded text-sm ${
                 r.completed
                   ? 'bg-yellow-500 text-white hover:bg-yellow-600'
@@ -167,18 +176,3 @@ export default function Reminders() {
     </div>
   );
 }
-
-// Note: toggleCompleted function remains below
-const toggleCompleted = async (id, currentlyCompleted) => {
-  const { error } = await supabase
-    .from('reminders')
-    .update({ completed: !currentlyCompleted })
-    .eq('id', id);
-
-  if (error) {
-    console.error('Error updating reminder:', error);
-  } else {
-    // reload the list
-    fetchReminders();
-  }
-};

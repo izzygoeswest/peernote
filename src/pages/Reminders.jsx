@@ -8,12 +8,11 @@ export default function Reminders() {
   const { session } = useAuth()
   const userId = session?.user?.id
 
-  const [reminders, setReminders]       = useState([])
-  const [loading, setLoading]           = useState(true)
-  const [showForm, setShowForm]         = useState(false)
+  const [reminders, setReminders]             = useState([])
+  const [loading, setLoading]                 = useState(true)
+  const [showForm, setShowForm]               = useState(false)
   const [editingReminder, setEditingReminder] = useState(null)
 
-  // fetch reminders for this user
   const fetchReminders = async () => {
     setLoading(true)
     const { data, error } = await supabase
@@ -21,12 +20,10 @@ export default function Reminders() {
       .select('id, note, date, completed, contacts(id, name)')
       .eq('user_id', userId)
       .order('date', { ascending: false })
-
     if (!error) setReminders(data)
     setLoading(false)
   }
 
-  // toggle completed status
   const toggleCompleted = async (id, completed) => {
     await supabase
       .from('reminders')
@@ -41,21 +38,16 @@ export default function Reminders() {
 
   return (
     <div className="relative">
-      {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Reminders</h1>
         <button
-          onClick={() => {
-            setEditingReminder(null)
-            setShowForm(true)
-          }}
+          onClick={() => { setEditingReminder(null); setShowForm(true) }}
           className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700"
         >
           + Add Reminder
         </button>
       </div>
 
-      {/* List or Loading */}
       {loading ? (
         <p className="text-gray-600">Loading reminders…</p>
       ) : (
@@ -91,7 +83,6 @@ export default function Reminders() {
         </ul>
       )}
 
-      {/* Re-use exactly your ContactForm pattern for Reminders */}
       {showForm && (
         <ReminderForm
           existingReminder={editingReminder}

@@ -1,147 +1,119 @@
-import React, { useState, useEffect } from 'react';
-import { supabase } from '../supabaseClient';
+import React, { useEffect, useState } from 'react'
+import { supabase } from '../supabaseClient'
+import { FiX } from 'react-icons/fi'
+import { useAuth } from '../auth'
 
-const ReminderForm = ({ onClose, onReminderAdded, existingReminder }) => {
-  const [formData, setFormData] = useState({
-    contact_id: '',
-    date: '',
-    note: '',
-  });
-  const [contacts, setContacts] = useState([]);
-  const [loading, setLoading] = useState(false);
+export default function ReminderForm({ existingReminder, onClose, onReminderAdded }) {
+  const { session } = useAuth()
+  const userId = session.user.id
 
-  const fetchContacts = async () => {
-    const { data: sessionData } = await supabase.auth.getSession();
-    const user = sessionData.session?.user;
-    if (!user) return;
+  const [contacts, setContacts]     = useState([])
+  const [contactId, setContactId]   = useState(existingReminder?.contact_id || '')
+  const [date, setDate]             = useState(existingReminder?.date || '')
+  const [note, setNote]             = useState(existingReminder?.note || '')
+  const [saving, setSaving]         = useState(false)
 
-    const { data } = await supabase
+  // load your contacts for the dropdown
+  useEffect(() => {
+    supabase
       .from('contacts')
       .select('id, name')
-      .eq('user_id', user.id)
-      .order('name', { ascending: true });
-
-    setContacts(data || []);
-  };
-
-  useEffect(() => {
-    fetchContacts();
-  }, []);
-
-  useEffect(() => {
-    if (existingReminder) {
-      setFormData({
-        contact_id: existingReminder.contact_id || '',
-        date: existingReminder.date || '',
-        note: existingReminder.note || '',
-      });
-    }
-  }, [existingReminder]);
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
+      .eq('user_id', userId)
+      .order('name', { ascending: true })
+      .then(({ data, error }) => {
+        if (!error) setContacts(data)
+      })
+  }, [userId])
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-
-    const { data: sessionData } = await supabase.auth.getSession();
-    const user = sessionData.session?.user;
-    if (!user) return;
-
-    let error;
+    e.preventDefault()
+    setSaving(true)
 
     if (existingReminder) {
-      ({ error } = await supabase
+      await supabase
         .from('reminders')
-        .update({ ...formData })
-        .eq('id', existingReminder.id));
+        .update({ contact_id: contactId, date, note })
+        .eq('id', existingReminder.id)
     } else {
-      ({ error } = await supabase.from('reminders').insert([
-        {
-          ...formData,
-          user_id: user.id,
-          completed: false,
-        },
-      ]));
+      await supabase
+        .from('reminders')
+        .insert([
+          { user_id: userId, contact_id: contactId, date, note }
+        ])
     }
 
-    setLoading(false);
-    if (!error) {
-      onReminderAdded();
-      onClose();
-    } else {
-      alert('Error saving reminder: ' + error.message);
-    }
-  };
+    setSaving(false)
+    onReminderAdded()
+    onClose()
+  }
 
   return (
-    <div className="fixed top-0 right-0 w-full max-w-md h-full bg-white shadow-lg z-50 p-6 overflow-y-auto transition-transform duration-300 transform translate-x-0">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold">
-          {existingReminder ? 'Edit Reminder' : 'Add Reminder'}
-        </h2>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg w-full max-w-md p-6 relative">
+        {/* Close button */}
         <button
           onClick={onClose}
-          className="text-gray-500 hover:text-black text-xl font-bold"
+          className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
         >
-          ✕
+          <FiX size={24} />
         </button>
-      </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm">Contact</label>
-          <select
-            name="contact_id"
-            value={formData.contact_id}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border rounded"
-            required
+        <h2 className="text-xl font-semibold mb-4">
+          {existingReminder ? 'Edit Reminder' : 'Add Reminder'}
+        </h2>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Contact selector */}
+          <div>
+            <label className="block text-sm font-medium">Contact</label>
+            <select
+              className="w-full px-3 py-2 border rounded"
+              value={contactId}
+              onChange={(e) => setContactId(e.target.value)}
+              required
+            >
+              <option value="">Choose a contact</option>
+              {contacts.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Date input */}
+          <div>
+            <label className="block text-sm font-medium">Date</label>
+            <input
+              type="date"
+              className="w-full px-3 py-2 border rounded"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              required
+            />
+          </div>
+
+          {/* Note input */}
+          <div>
+            <label className="block text-sm font-medium">Note</label>
+            <input
+              type="text"
+              className="w-full px-3 py-2 border rounded"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              required
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={saving}
+            className="bg-purple-600 text-white w-full py-2 rounded hover:bg-purple-700"
           >
-            <option value="">Select contact</option>
-            {contacts.map((contact) => (
-              <option key={contact.id} value={contact.id}>
-                {contact.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm">Date</label>
-          <input
-            type="date"
-            name="date"
-            value={formData.date}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border rounded"
-            required
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm">Note</label>
-          <textarea
-            name="note"
-            value={formData.note}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border rounded"
-          ></textarea>
-        </div>
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-purple-600 text-white py-2 rounded hover:bg-purple-700"
-        >
-          {loading ? 'Saving...' : existingReminder ? 'Update Reminder' : 'Save Reminder'}
-        </button>
-      </form>
+            {saving ? 'Saving…' : existingReminder ? 'Update Reminder' : 'Save Reminder'}
+          </button>
+        </form>
+      </div>
     </div>
-  );
-};
-
-export default ReminderForm;
+  )
+}

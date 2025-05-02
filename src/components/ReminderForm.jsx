@@ -13,16 +13,14 @@ export default function ReminderForm({ existingReminder, onClose, onReminderAdde
   const [note, setNote]             = useState(existingReminder?.note || '')
   const [saving, setSaving]         = useState(false)
 
-  // load your contacts for the dropdown
+  // load contacts for dropdown
   useEffect(() => {
     supabase
       .from('contacts')
       .select('id, name')
       .eq('user_id', userId)
       .order('name', { ascending: true })
-      .then(({ data, error }) => {
-        if (!error) setContacts(data)
-      })
+      .then(({ data }) => setContacts(data || []))
   }, [userId])
 
   const handleSubmit = async (e) => {
@@ -37,9 +35,7 @@ export default function ReminderForm({ existingReminder, onClose, onReminderAdde
     } else {
       await supabase
         .from('reminders')
-        .insert([
-          { user_id: userId, contact_id: contactId, date, note }
-        ])
+        .insert([{ user_id: userId, contact_id: contactId, date, note }])
     }
 
     setSaving(false)
@@ -48,22 +44,22 @@ export default function ReminderForm({ existingReminder, onClose, onReminderAdde
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg w-full max-w-md p-6 relative">
-        {/* Close button */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
-        >
-          <FiX size={24} />
-        </button>
+    <div className="fixed inset-0 z-50 flex">
+      {/* Drawer Panel */}
+      <div className="w-full max-w-md bg-white h-full shadow-lg p-6 overflow-auto relative">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold">
+            {existingReminder ? 'Edit Reminder' : 'Add Reminder'}
+          </h2>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+            <FiX size={24} />
+          </button>
+        </div>
 
-        <h2 className="text-xl font-semibold mb-4">
-          {existingReminder ? 'Edit Reminder' : 'Add Reminder'}
-        </h2>
-
+        {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Contact selector */}
+          {/* Contact */}
           <div>
             <label className="block text-sm font-medium">Contact</label>
             <select
@@ -81,7 +77,7 @@ export default function ReminderForm({ existingReminder, onClose, onReminderAdde
             </select>
           </div>
 
-          {/* Date input */}
+          {/* Date */}
           <div>
             <label className="block text-sm font-medium">Date</label>
             <input
@@ -93,7 +89,7 @@ export default function ReminderForm({ existingReminder, onClose, onReminderAdde
             />
           </div>
 
-          {/* Note input */}
+          {/* Note */}
           <div>
             <label className="block text-sm font-medium">Note</label>
             <input
@@ -105,15 +101,23 @@ export default function ReminderForm({ existingReminder, onClose, onReminderAdde
             />
           </div>
 
+          {/* Submit */}
           <button
             type="submit"
             disabled={saving}
             className="bg-purple-600 text-white w-full py-2 rounded hover:bg-purple-700"
           >
-            {saving ? 'Saving…' : existingReminder ? 'Update Reminder' : 'Save Reminder'}
+            {saving
+              ? 'Saving…'
+              : existingReminder
+              ? 'Update Reminder'
+              : 'Save Reminder'}
           </button>
         </form>
       </div>
+
+      {/* Click-outside overlay to close */}
+      <div className="flex-1" onClick={onClose} />
     </div>
   )
 }

@@ -4,9 +4,9 @@ import mailgun from 'mailgun-js'
 import { createClient } from '@supabase/supabase-js'
 
 // Initialize Supabase Admin client
-// Note: using VITE_SUPABASE_URL because that's your Netlify env var
+// (Ensure SUPABASE_URL & SUPABASE_SERVICE_ROLE_KEY are set in Netlify Functions environment)
 const supabaseAdmin = createClient(
-  process.env.VITE_SUPABASE_URL,
+  process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY,
   {
     auth: { persistSession: false, detectSessionInUrl: false }
@@ -14,6 +14,7 @@ const supabaseAdmin = createClient(
 )
 
 // Initialize Mailgun client
+// (Ensure MG_API_KEY & MG_DOMAIN are set in Netlify Functions environment)
 const mg = mailgun({
   apiKey: process.env.MG_API_KEY,
   domain:  process.env.MG_DOMAIN,
@@ -26,8 +27,9 @@ export const handler = async () => {
   const today = new Date().toISOString().split('T')[0]
   console.log('⏳ Fetching reminders due on', today)
 
-  // 1) Fetch due, incomplete, not sent reminders with contact and user preferences
-  const { data: dueReminders, error: fetchError } = await supabaseAdmin
+  // 1) Fetch reminders due today, incomplete, not yet sent,
+  //    including contact name via the foreign key relationship
+  const { data: reminders, error: fetchError } = await supabaseAdmin
     .from('reminders')
     .select(
       `
@@ -35,8 +37,7 @@ export const handler = async () => {
       note,
       date,
       user_id,
-      contacts (name),
-      users_meta:users_meta!reminders_user_id_fkey (notify_reminders)
+      contacts (name)
     `)
     .eq('date',      today)
     .eq('completed', false)
@@ -50,30 +51,41 @@ export const handler = async () => {
     }
   }
 
-  console.log(`📋 Found ${dueReminders.length} reminders to process`)
+  console.log(`📋 Found ${reminders.length} reminders to process`)
 
   const results = []
 
-  for (const r of dueReminders) {
-    // Skip if user opted out
-    if (!r.users_meta?.notify_reminders) {
-      console.log(`⏭️ Skipping ${r.id}: notifications disabled`)
+  // Process each reminder
+  for (const r of reminders) {
+    // 2) Fetch user's notification preference
+    const { data: meta, error: metaErr } = await supabaseAdmin
+      .from('users_meta')
+      .select('notify_reminders')
+      .eq('user_id', r.user_id)
+      .single()
+
+    if (metaErr) {
+      console.error('❌ Could not fetch users_meta for', r.user_id, metaErr)
+      results.push({ id: r.id, sent: false })
+      continue
+    }
+    if (!meta.notify_reminders) {
+      console.log(`⏭️ Skipping reminder ${r.id}: notifications disabled`)
       results.push({ id: r.id, sent: false, skipped: true })
       continue
     }
 
-    // Lookup user email
+    // 3) Lookup user email via Admin API
     const { data: userRec, error: userErr } = await supabaseAdmin.auth.admin.getUserById(r.user_id)
     const userEmail = userRec?.user?.email
     if (userErr || !userEmail) {
-      console.error('❌ Could not fetch email for user', r.user_id, userErr)
+      console.error('❌ Could not fetch user email for ID', r.user_id, userErr)
       results.push({ id: r.id, sent: false })
       continue
     }
 
+    // 4) Prepare email content, including contact name
     const contactName = r.contacts?.name || 'your contact'
-
-    // Prepare email
     const message = {
       from:    `PeerNote <${process.env.FROM_EMAIL}>`,
       to:      userEmail,
@@ -81,11 +93,12 @@ export const handler = async () => {
       text:    `Hi! Just a reminder to reach out to ${contactName}: “${r.note}” is due today (${r.date}).`,
     }
 
+    // 5) Send email via Mailgun
     try {
       await mg.messages().send(message)
       console.log(`✉️ Sent reminder ${r.id} to ${userEmail}`)
 
-      // Mark as sent
+      // 6) Mark reminder as sent
       await supabaseAdmin
         .from('reminders')
         .update({ sent: true })
@@ -93,7 +106,7 @@ export const handler = async () => {
 
       results.push({ id: r.id, sent: true })
     } catch (sendErr) {
-      console.error(`❌ Mailgun error for ${r.id}:`, sendErr)
+      console.error(`❌ Mailgun error for reminder ${r.id}:`, sendErr)
       results.push({ id: r.id, sent: false })
     }
   }

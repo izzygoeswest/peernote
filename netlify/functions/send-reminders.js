@@ -4,10 +4,13 @@ import mailgun from 'mailgun-js'
 import { createClient } from '@supabase/supabase-js'
 
 // Initialize Supabase Admin client
+// Note: using VITE_SUPABASE_URL because that's your Netlify env var
 const supabaseAdmin = createClient(
-  process.env.SUPABASE_URL,
+  process.env.VITE_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY,
-  { auth: { persistSession: false, detectSessionInUrl: false } }
+  {
+    auth: { persistSession: false, detectSessionInUrl: false }
+  }
 )
 
 // Initialize Mailgun client
@@ -21,9 +24,9 @@ export const handler = async () => {
 
   // Today's date in YYYY-MM-DD
   const today = new Date().toISOString().split('T')[0]
+  console.log('⏳ Fetching reminders due on', today)
 
-  // Fetch reminders due today, incomplete, not yet sent,
-  // including each user's notification preference and contact name
+  // 1) Fetch due, incomplete, not sent reminders with contact and user preferences
   const { data: dueReminders, error: fetchError } = await supabaseAdmin
     .from('reminders')
     .select(
@@ -32,12 +35,8 @@ export const handler = async () => {
       note,
       date,
       user_id,
-      contacts (
-        name
-      ),
-      users_meta:users_meta!reminders_user_id_fkey (
-        notify_reminders
-      )
+      contacts (name),
+      users_meta:users_meta!reminders_user_id_fkey (notify_reminders)
     `)
     .eq('date',      today)
     .eq('completed', false)
@@ -56,26 +55,25 @@ export const handler = async () => {
   const results = []
 
   for (const r of dueReminders) {
-    // Skip if user opted out of email reminders
+    // Skip if user opted out
     if (!r.users_meta?.notify_reminders) {
-      console.log(`⏭️ Skipping reminder ${r.id}: user opted out`)
+      console.log(`⏭️ Skipping ${r.id}: notifications disabled`)
       results.push({ id: r.id, sent: false, skipped: true })
       continue
     }
 
-    // Lookup the user's email via Admin API
+    // Lookup user email
     const { data: userRec, error: userErr } = await supabaseAdmin.auth.admin.getUserById(r.user_id)
     const userEmail = userRec?.user?.email
-
     if (userErr || !userEmail) {
-      console.error('❌ Could not fetch user email for ID', r.user_id, userErr)
+      console.error('❌ Could not fetch email for user', r.user_id, userErr)
       results.push({ id: r.id, sent: false })
       continue
     }
 
     const contactName = r.contacts?.name || 'your contact'
 
-    // Prepare and send the email
+    // Prepare email
     const message = {
       from:    `PeerNote <${process.env.FROM_EMAIL}>`,
       to:      userEmail,
@@ -87,7 +85,7 @@ export const handler = async () => {
       await mg.messages().send(message)
       console.log(`✉️ Sent reminder ${r.id} to ${userEmail}`)
 
-      // Mark reminder as sent
+      // Mark as sent
       await supabaseAdmin
         .from('reminders')
         .update({ sent: true })
@@ -95,7 +93,7 @@ export const handler = async () => {
 
       results.push({ id: r.id, sent: true })
     } catch (sendErr) {
-      console.error(`❌ Mailgun error for reminder ${r.id}:`, sendErr)
+      console.error(`❌ Mailgun error for ${r.id}:`, sendErr)
       results.push({ id: r.id, sent: false })
     }
   }

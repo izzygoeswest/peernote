@@ -4,9 +4,9 @@ import mailgun from 'mailgun-js'
 import { createClient } from '@supabase/supabase-js'
 
 // Initialize Supabase Admin client
-// (Ensure SUPABASE_URL & SUPABASE_SERVICE_ROLE_KEY are set in Netlify Functions environment)
+// NOTE: use VITE_SUPABASE_URL (as defined in your Netlify env-vars) and your service-role key
 const supabaseAdmin = createClient(
-  process.env.SUPABASE_URL,
+  process.env.VITE_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY,
   {
     auth: { persistSession: false, detectSessionInUrl: false }
@@ -14,7 +14,6 @@ const supabaseAdmin = createClient(
 )
 
 // Initialize Mailgun client
-// (Ensure MG_API_KEY & MG_DOMAIN are set in Netlify Functions environment)
 const mg = mailgun({
   apiKey: process.env.MG_API_KEY,
   domain:  process.env.MG_DOMAIN,
@@ -28,7 +27,7 @@ export const handler = async () => {
   console.log('⏳ Fetching reminders due on', today)
 
   // 1) Fetch reminders due today, incomplete, not yet sent,
-  //    including contact name via the foreign key relationship
+  //    including contact name via foreign-key join
   const { data: reminders, error: fetchError } = await supabaseAdmin
     .from('reminders')
     .select(

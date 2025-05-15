@@ -1,13 +1,18 @@
 // src/supabaseClient.js
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl     = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Grab from your Vite env
+let url = import.meta.env.VITE_SUPABASE_URL
+if (!url.startsWith('http')) {
+  url = 'https://' + url.replace(/^(https?:\/\/)?/, '')
+}
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-  }
-  // ← NO `global` or header overrides here
-});
+const key = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+if (!url || !key) {
+  throw new Error(
+    'Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY in environment!'
+  )
+}
+
+export const supabase = createClient(url, key)

@@ -1,30 +1,39 @@
+// src/pages/Login.jsx
 import React, { useState } from 'react';
 import { supabase } from '../supabaseClient';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
-const Login = () => {
-  const [formData, setFormData] = useState({ email: '', password: '' });
+export default function Login() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
   const handleLogin = async (e) => {
     e.preventDefault();
-    setError('');
-
-    const { error: loginError } = await supabase.auth.signInWithPassword({
-      email: formData.email,
-      password: formData.password,
-    });
-
-    if (loginError) {
-      setError(loginError.message);
+    setError(''); setMessage('');
+    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+    if (signInError) {
+      setError(signInError.message);
     } else {
       navigate('/dashboard');
+    }
+  };
+
+  const handleForgot = async () => {
+    setError(''); setMessage('');
+    if (!email) {
+      setError('Please enter your email to reset password.');
+      return;
+    }
+    const { data, error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`
+    });
+    if (resetError) {
+      setError(resetError.message);
+    } else {
+      setMessage('Check your inbox for a reset link.');
     }
   };
 
@@ -35,24 +44,23 @@ const Login = () => {
 
         <input
           type="email"
-          name="email"
           placeholder="Email"
-          value={formData.email}
-          onChange={handleChange}
+          value={email}
+          onChange={e => setEmail(e.target.value)}
           className="w-full px-3 py-2 mb-4 border rounded"
           required
         />
         <input
           type="password"
-          name="password"
           placeholder="Password"
-          value={formData.password}
-          onChange={handleChange}
-          className="w-full px-3 py-2 mb-4 border rounded"
+          value={password}
+          onChange={e => setPassword(e.target.value)}
+          className="w-full px-3 py-2 mb-2 border rounded"
           required
         />
 
         {error && <p className="text-red-600 text-sm mb-2">{error}</p>}
+        {message && <p className="text-green-600 text-sm mb-2">{message}</p>}
 
         <button
           type="submit"
@@ -61,15 +69,19 @@ const Login = () => {
           Log In
         </button>
 
-        <p className="text-sm text-center mt-4">
-          Don't have an account?{' '}
-          <a href="/signup" className="text-purple-600 hover:underline">
-            Sign Up
-          </a>
-        </p>
+        <div className="flex justify-between items-center mt-4 text-sm">
+          <button
+            type="button"
+            onClick={handleForgot}
+            className="text-purple-600 hover:underline"
+          >
+            Forgot password?
+          </button>
+          <Link to="/signup" className="text-purple-600 hover:underline">
+            Sign up
+          </Link>
+        </div>
       </form>
     </div>
   );
-};
-
-export default Login;
+}

@@ -21,6 +21,7 @@ import Contacts from './pages/Contacts';
 import Reminders from './pages/Reminders';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
+import ResetPassword from './pages/ResetPassword';    // ← added
 
 import { useAuth } from './auth';
 import { supabase } from './supabaseClient';
@@ -46,8 +47,8 @@ function AppLayout({ children }) {
   const { session } = useAuth();
   const [isSidebarOpen, setSidebarOpen] = useState(false);
 
-  // Hide sidebar on these routes
-  const noSidebarRoutes = ['/', '/login', '/signup', '/pricing'];
+  // Hide sidebar on these routes (now includes reset-password)
+  const noSidebarRoutes = ['/', '/login', '/signup', '/pricing', '/reset-password'];
   const hideSidebar = noSidebarRoutes.includes(location.pathname);
 
   // Close mobile sidebar on route change
@@ -160,6 +161,7 @@ export default function App() {
     <Router>
       <AppLayout>
         <Routes>
+          {/* public */}
           <Route path="/" element={<Home />} />
           <Route
             path="/login"
@@ -178,6 +180,11 @@ export default function App() {
             }
           />
           <Route path="/pricing" element={<Pricing />} />
+
+          {/* password-reset */}
+          <Route path="/reset-password" element={<ResetPassword />} />
+
+          {/* protected */}
           <Route
             path="/dashboard"
             element={
@@ -218,6 +225,8 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+
+          {/* fallback */}
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </AppLayout>
